@@ -1,6 +1,6 @@
 {
   "name": "flint-vscode",
-  "displayName": "Flint",
+  "displayName": "Flint Language",
   "description": "Language support for Flint route modules, HTML pages, and UI pages.",
   "version": "0.1.0",
   "publisher": "mateusam",
