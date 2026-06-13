@@ -109,4 +109,11 @@ curl -X POST http://127.0.0.1:3000/tasks \
 | `flint build [dir]` | Build a standalone release binary in `dist/`. |
 | `flint version` | Print the CLI version. |
 
+## Editor Support
+
+Install the [Flint Language](https://marketplace.visualstudio.com/items?itemName=mateusam.flint-vscode)
+extension for VS Code to get syntax highlighting, snippets, and language
+configuration for `.fl` route/service/repository files, `.flint.html` pages,
+and `.flint.ui` pages.
+
 Next: [First API](/guide/first-api).

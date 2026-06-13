@@ -11,6 +11,11 @@ runtime. The project also includes two page layers for web systems:
 - `.flint.html` for HTML-first server-rendered templates.
 - `.flint.ui` for control-first pages with a built-in default web style.
 
+## Links
+
+- [Documentation](https://flint.devlayer.app)
+- [VS Code extension](https://marketplace.visualstudio.com/items?itemName=mateusam.flint-vscode)
+
 ## Example
 
 ```txt
