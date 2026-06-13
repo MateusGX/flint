@@ -3,6 +3,7 @@
   "displayName": "Flint Language",
   "description": "Language support for Flint route modules, HTML pages, and UI pages.",
   "version": "0.1.0",
+  "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",
   "repository": {
