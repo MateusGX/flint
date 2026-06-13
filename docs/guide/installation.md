@@ -1,5 +1,8 @@
 # Installation
 
+Get the `flint` CLI on your machine: download a prebuilt binary, or build it
+from source with Rust.
+
 ## Download a Prebuilt Binary
 
 ### Install Script
