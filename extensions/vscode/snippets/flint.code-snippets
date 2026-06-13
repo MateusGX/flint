@@ -1,0 +1,77 @@
+{
+  "Use include": {
+    "prefix": "use",
+    "body": [
+      "use \"${1:services/file.fl}\""
+    ],
+    "description": "Include another Flint source file."
+  },
+  "Route handler": {
+    "prefix": "route",
+    "body": [
+      "${1:handler}:",
+      "    mov r0, \"${2:Hello}\"",
+      "    ncall http.text, r0",
+      "    ret",
+      "",
+      "route ${3|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${4:/path}\" -> ${1:handler}"
+    ],
+    "description": "Create an HTTP route handler."
+  },
+  "JSON response": {
+    "prefix": "json-response",
+    "body": [
+      "ncallr r0, json.object",
+      "mov r1, \"${1:key}\"",
+      "mov r2, \"${2:value}\"",
+      "ncallr r0, json.set, r0, r1, r2",
+      "ncall http.json, r0"
+    ],
+    "description": "Build and return a JSON object."
+  },
+  "Native call": {
+    "prefix": "ncall",
+    "body": [
+      "ncall ${1:http.text}, ${2:r0}"
+    ],
+    "description": "Call a native function for side effects."
+  },
+  "Native call with result": {
+    "prefix": "ncallr",
+    "body": [
+      "ncallr ${1:r0}, ${2:http.body}${3:, r1}"
+    ],
+    "description": "Call a native function and store its result."
+  },
+  "Sections skeleton": {
+    "prefix": "section",
+    "body": [
+      "section .data",
+      "${1:counter}:",
+      "    data ${2:0}",
+      "",
+      "section .bss",
+      "${3:buffer}:",
+      "    res ${4:4}",
+      "",
+      "section .text",
+      "${5:main}:",
+      "    mov r0, ${1:counter}",
+      "    load r1, [r0]",
+      "    $0",
+      "    hlt"
+    ],
+    "description": "Static memory layout using section .data/.bss/.text."
+  },
+  "Loop": {
+    "prefix": "loop",
+    "body": [
+      "mov ${1:r0}, 0",
+      "${2:loop}:",
+      "    ${3:add ${1:r0}, ${1:r0}, 1}",
+      "    cmp ${1:r0}, ${4:10}",
+      "    jl ${2:loop}"
+    ],
+    "description": "Create a simple counted loop."
+  }
+}

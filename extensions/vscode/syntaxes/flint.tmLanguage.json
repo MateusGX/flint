@@ -1,0 +1,226 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Flint",
+  "scopeName": "source.flint",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#routes"
+    },
+    {
+      "include": "#includes"
+    },
+    {
+      "include": "#sections"
+    },
+    {
+      "include": "#labels"
+    },
+    {
+      "include": "#instructions"
+    },
+    {
+      "include": "#native-functions"
+    },
+    {
+      "include": "#registers"
+    },
+    {
+      "include": "#memory"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.semicolon.flint",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.flint",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.flint"
+        }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.flint"
+        }
+      },
+      "patterns": [
+        {
+          "name": "constant.character.escape.flint",
+          "match": "\\\\[nt\"\\\\]"
+        },
+        {
+          "name": "invalid.illegal.escape.flint",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "routes": {
+      "patterns": [
+        {
+          "name": "meta.route.flint",
+          "match": "^\\s*(route)\\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*(->)\\s*([A-Za-z_][A-Za-z0-9_.]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.route.flint"
+            },
+            "2": {
+              "name": "constant.language.http-method.flint"
+            },
+            "3": {
+              "name": "string.quoted.double.route-path.flint"
+            },
+            "4": {
+              "name": "keyword.operator.arrow.flint"
+            },
+            "5": {
+              "name": "entity.name.function.handler.flint"
+            }
+          }
+        }
+      ]
+    },
+    "includes": {
+      "patterns": [
+        {
+          "name": "meta.include.flint",
+          "match": "^\\s*(use)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.flint"
+            },
+            "2": {
+              "name": "string.quoted.double.include-path.flint"
+            }
+          }
+        }
+      ]
+    },
+    "sections": {
+      "patterns": [
+        {
+          "name": "meta.section.flint",
+          "match": "^\\s*(section)\\s+(\\.text|\\.data|\\.bss)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.section.flint"
+            },
+            "2": {
+              "name": "constant.language.section.flint"
+            }
+          }
+        }
+      ]
+    },
+    "labels": {
+      "patterns": [
+        {
+          "name": "meta.label.flint",
+          "match": "^\\s*(\\.?[A-Za-z_][A-Za-z0-9_.]*)(:)",
+          "captures": {
+            "1": {
+              "name": "entity.name.label.flint"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.flint"
+            }
+          }
+        }
+      ]
+    },
+    "instructions": {
+      "patterns": [
+        {
+          "name": "keyword.mnemonic.flint",
+          "match": "(?i)^\\s*\\b(mov|add|sub|mul|div|mod|addf|subf|mulf|divf|and|or|xor|not|shl|shr|neg|typeof|cmp|jmp|je|jne|jl|jg|jle|jge|push|pop|call|ret|hlt|load|store|ncall|ncallr|data|res)\\b"
+        }
+      ]
+    },
+    "native-functions": {
+      "patterns": [
+        {
+          "name": "support.function.native.flint",
+          "match": "\\b(debug\\.print|env\\.get|crypto\\.uuid|time\\.now|math\\.(abs|min|max|floor|ceil|sqrt|pow|random|rand_int)|string\\.(concat|len|equals|contains|starts_with|ends_with|escape_html|slice|replace|split|trim|to_upper|to_lower|to_int|from_int|from)|json\\.(parse|stringify|object|array|from_int|from_str|to_int|to_str|get|set|push|len|has|type|delete|keys|bool|null|merge)|ui\\.(window|window_end|card|card_end|section|section_end|row|row_end|column|column_end|title|text|field|button|form|form_end|input|submit)|http\\.(method|path|body|param|query|header|cookie|json_body|form|set_status|set_header|set_cookie|text|html|json|redirect|abort))\\b"
+        }
+      ]
+    },
+    "registers": {
+      "patterns": [
+        {
+          "name": "variable.language.register.flint",
+          "match": "\\br(?:1[0-5]|[0-9])\\b"
+        }
+      ]
+    },
+    "memory": {
+      "patterns": [
+        {
+          "name": "meta.memory.flint",
+          "begin": "\\[",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.memory.begin.flint"
+            }
+          },
+          "end": "\\]",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.memory.end.flint"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#registers"
+            },
+            {
+              "include": "#numbers"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.flint",
+          "match": "(?<![A-Za-z0-9_.])-?[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.flint",
+          "match": "(?<![A-Za-z0-9_.])-?[0-9]+\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.comma.flint",
+          "match": ","
+        },
+        {
+          "name": "keyword.operator.arrow.flint",
+          "match": "->"
+        }
+      ]
+    }
+  }
+}

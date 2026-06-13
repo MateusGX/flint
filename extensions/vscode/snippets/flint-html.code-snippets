@@ -1,0 +1,49 @@
+{
+  "Page": {
+    "prefix": "page",
+    "body": [
+      "@page \"${1:/}\"",
+      "<!doctype html>",
+      "<html>",
+      "<head>",
+      "    <meta charset=\"utf-8\">",
+      "    <title>${2:Flint}</title>",
+      "</head>",
+      "<body>",
+      "    ${3:<h1>Hello</h1>}",
+      "</body>",
+      "</html>"
+    ],
+    "description": "Create a Flint HTML page."
+  },
+  "Page with method": {
+    "prefix": "page-method",
+    "body": [
+      "@page ${1|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${2:/path}\""
+    ],
+    "description": "Create a Flint page directive with an explicit HTTP method."
+  },
+  "Use include": {
+    "prefix": "use",
+    "body": [
+      "@use \"${1:services/file.fl}\""
+    ],
+    "description": "Include a Flint source file from a page."
+  },
+  "Code block": {
+    "prefix": "block",
+    "body": [
+      "<%",
+      "    ${1:mov r0, \"Hello\"}",
+      "%>"
+    ],
+    "description": "Insert a Flint code block."
+  },
+  "Output expression": {
+    "prefix": "expr",
+    "body": [
+      "<%= ${1:r0} %>"
+    ],
+    "description": "Render a Flint expression value."
+  }
+}
