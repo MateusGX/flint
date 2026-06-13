@@ -27,6 +27,7 @@ Language support for Flint route modules, Flint HTML pages, and Flint UI pages.
 
 Common Flint snippets:
 
+- `use`
 - `route`
 - `ncall`
 - `ncallr`
