@@ -1,3 +1,5 @@
+<img src="docs/public/logo.svg" alt="Flint" width="96" />
+
 # Flint
 
 `Flint` is an experimental project that explores what an assembly-like

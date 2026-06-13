@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="40" fill="#111318"/>
+
+  <!-- flint stone -->
+  <polygon points="128,40 188,72 196,150 150,208 86,200 60,128" fill="#5b6472"/>
+  <polygon points="128,40 188,72 130,120 60,128" fill="#9aa5b1" opacity="0.55"/>
+  <polygon points="196,150 150,208 86,200 130,120" fill="#3f4754" opacity="0.65"/>
+
+  <!-- spark -->
+  <path d="M195,38 L202,58 L222,64 L202,70 L195,90 L188,70 L168,64 L188,58 Z" fill="#f6a623"/>
+  <circle cx="224" cy="94" r="4" fill="#f6a623" opacity="0.85"/>
+  <circle cx="210" cy="40" r="3" fill="#f6a623" opacity="0.6"/>
+</svg>
