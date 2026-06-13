@@ -5,6 +5,10 @@ export default defineConfig({
   description: 'A small register-based language and HTTP runtime for APIs and server-rendered pages',
   lang: 'en-US',
 
+  sitemap: {
+    hostname: 'https://flint.devlayer.app',
+  },
+
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
