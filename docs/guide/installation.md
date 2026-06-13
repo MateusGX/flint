@@ -1,11 +1,64 @@
 # Installation
 
-::: warning Experimental project
-`Flint` does not have a published installer yet. Build the CLI locally with
-Rust.
-:::
+## Download a Prebuilt Binary
 
-## Requirements
+### Install Script
+
+On Linux and macOS:
+
+```sh
+curl -fsSL https://flint.devlayer.app/install.sh | sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+irm https://flint.devlayer.app/install.ps1 | iex
+```
+
+This downloads the right archive for your platform from
+[GitHub Releases](https://github.com/MateusGX/flint/releases), extracts the
+`flint` binary, and installs it to `~/.local/bin` (Linux/macOS) or
+`%LOCALAPPDATA%\Flint\bin` (Windows). Set `FLINT_VERSION` to install a
+specific release tag, or `FLINT_INSTALL_DIR` to change the install location.
+
+### Manual Download
+
+Alternatively, download the archive for your platform directly:
+
+| Platform | Archive |
+|---|---|
+| Linux x86_64 | `flint-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux ARM64 | `flint-aarch64-unknown-linux-gnu.tar.gz` |
+| macOS Intel | `flint-x86_64-apple-darwin.tar.gz` |
+| macOS Apple Silicon | `flint-aarch64-apple-darwin.tar.gz` |
+| Windows x86_64 | `flint-x86_64-pc-windows-msvc.zip` |
+
+Extract it and put the `flint` binary on your `PATH`.
+
+### Uninstall
+
+On Linux and macOS:
+
+```sh
+curl -fsSL https://flint.devlayer.app/uninstall.sh | sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+irm https://flint.devlayer.app/uninstall.ps1 | iex
+```
+
+This removes the binary from the install directory (and, on Windows, the
+`PATH` entry the install script added). Set `FLINT_INSTALL_DIR` if you
+installed to a custom location.
+
+## Build from Source
+
+Alternatively, build the CLI locally with Rust.
+
+### Requirements
 
 Install Rust from [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
 
@@ -16,7 +69,7 @@ rustc --version
 cargo --version
 ```
 
-## Build the CLI
+### Build the CLI
 
 From the repository root:
 
@@ -36,7 +89,7 @@ To install it on your `PATH`:
 cargo install --path crates/flint-cli --bin flint
 ```
 
-## Verify the Repository
+### Verify the Repository
 
 Run the test suite:
 
