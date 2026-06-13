@@ -1,6 +1,8 @@
-<img src="docs/public/logo.svg" alt="Flint" width="96" />
+<p align="center">
+  <img src="docs/public/logo.svg" alt="Flint" width="96" />
+</p>
 
-# Flint
+<h1 align="center">Flint</h1>
 
 `Flint` is an experimental project that explores what an assembly-like
 language could look like when used to build HTTP APIs and server-rendered web
