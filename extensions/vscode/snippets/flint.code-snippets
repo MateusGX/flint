@@ -9,12 +9,14 @@
   "Route handler": {
     "prefix": "route",
     "body": [
+      "section .route",
+      "    ${3|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${4:/path}\" -> ${1:handler}",
+      "",
+      "section .text",
       "${1:handler}:",
       "    mov r0, \"${2:Hello}\"",
       "    ncall http.text, r0",
-      "    ret",
-      "",
-      "route ${3|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${4:/path}\" -> ${1:handler}"
+      "    ret"
     ],
     "description": "Create an HTTP route handler."
   },
@@ -46,22 +48,43 @@
   "Sections skeleton": {
     "prefix": "section",
     "body": [
+      "section .route",
+      "    ${1|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${2:/path}\" -> ${3:handler}",
+      "",
       "section .data",
-      "${1:counter}:",
-      "    data ${2:0}",
+      "${4:counter}:",
+      "    data ${5:0}",
       "",
       "section .bss",
-      "${3:buffer}:",
-      "    res ${4:4}",
+      "${6:buffer}:",
+      "    res ${7:4}",
       "",
       "section .text",
-      "${5:main}:",
-      "    mov r0, ${1:counter}",
+      "${3:handler}:",
+      "    mov r0, ${4:counter}",
       "    load r1, [r0]",
       "    $0",
-      "    hlt"
+      "    ret"
     ],
-    "description": "Static memory layout using section .data/.bss/.text."
+    "description": "Section-based Flint route module."
+  },
+  "Text section": {
+    "prefix": "text-section",
+    "body": [
+      "section .text",
+      "${1:label}:",
+      "    $0",
+      "    ret"
+    ],
+    "description": "Create a text section with a label."
+  },
+  "Route section": {
+    "prefix": "route-section",
+    "body": [
+      "section .route",
+      "    ${1|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${2:/path}\" -> ${3:handler}"
+    ],
+    "description": "Create a route section."
   },
   "Loop": {
     "prefix": "loop",

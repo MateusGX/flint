@@ -1,0 +1,28 @@
+{
+  "iconDefinitions": {
+    "_flint": {
+      "iconPath": "./flint.svg"
+    },
+    "_flintUi": {
+      "iconPath": "./flint-ui.svg"
+    },
+    "_flintBytecode": {
+      "iconPath": "./flint-bytecode.svg"
+    },
+    "_flintConfig": {
+      "iconPath": "./flint-config.svg"
+    }
+  },
+  "fileExtensions": {
+    "fl": "_flint",
+    "flint.ui": "_flintUi",
+    "flintbc": "_flintBytecode"
+  },
+  "fileNames": {
+    "flint.toml": "_flintConfig"
+  },
+  "languageIds": {
+    "flint": "_flint",
+    "flint-ui": "_flintUi"
+  }
+}

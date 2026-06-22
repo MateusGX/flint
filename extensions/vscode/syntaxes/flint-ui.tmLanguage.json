@@ -1,60 +1,44 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Flint UI",
-  "scopeName": "text.html.flint-ui",
+  "scopeName": "source.flint-ui",
   "patterns": [
     {
-      "include": "#page-directives"
+      "include": "#comments"
     },
     {
-      "include": "#output-expression"
+      "include": "#uses"
     },
     {
-      "include": "#code-block"
+      "include": "#sections"
     },
     {
-      "include": "text.html.basic"
+      "include": "#routes"
+    },
+    {
+      "include": "#render"
+    },
+    {
+      "include": "source.flint"
     }
   ],
   "repository": {
-    "page-directives": {
+    "comments": {
       "patterns": [
         {
-          "name": "meta.directive.page.flint-ui",
-          "match": "^\\s*(@page)(?:\\s+(?:(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+)?(\"(?:\\\\[nt\"\\\\]|[^\"])*\"))?\\s*$",
-          "captures": {
-            "1": {
-              "name": "keyword.control.directive.page.flint-ui"
-            },
-            "2": {
-              "name": "constant.language.http-method.flint-ui"
-            },
-            "3": {
-              "name": "string.quoted.double.route-path.flint-ui"
-            }
-          }
-        },
-        {
-          "name": "meta.directive.route.flint-ui",
-          "match": "^\\s*(@route)\\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*$",
-          "captures": {
-            "1": {
-              "name": "keyword.control.directive.route.flint-ui"
-            },
-            "2": {
-              "name": "constant.language.http-method.flint-ui"
-            },
-            "3": {
-              "name": "string.quoted.double.route-path.flint-ui"
-            }
-          }
-        },
+          "name": "comment.line.semicolon.flint-ui",
+          "match": ";.*$"
+        }
+      ]
+    },
+    "uses": {
+      "patterns": [
         {
           "name": "meta.directive.use.flint-ui",
           "match": "^\\s*(@use)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*$",
           "captures": {
             "1": {
-              "name": "keyword.control.directive.use.flint-ui"
+              "name": "keyword.control.import.flint-ui"
             },
             "2": {
               "name": "string.quoted.double.include-path.flint-ui"
@@ -63,45 +47,48 @@
         }
       ]
     },
-    "output-expression": {
-      "name": "meta.embedded.output.flint-ui",
-      "begin": "<%=",
-      "beginCaptures": {
-        "0": {
-          "name": "punctuation.section.embedded.begin.flint-ui"
-        }
-      },
-      "end": "%>",
-      "endCaptures": {
-        "0": {
-          "name": "punctuation.section.embedded.end.flint-ui"
-        }
-      },
-      "contentName": "source.flint.embedded.html",
+    "sections": {
       "patterns": [
         {
-          "include": "source.flint"
+          "name": "meta.section.flint-ui",
+          "match": "^\\s*(section)\\s+(\\.route|\\.data|\\.bss|\\.text|\\.render)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.section.flint-ui"
+            },
+            "2": {
+              "name": "constant.language.section.flint-ui"
+            }
+          }
         }
       ]
     },
-    "code-block": {
-      "name": "meta.embedded.block.flint-ui",
-      "begin": "<%(?![=])",
-      "beginCaptures": {
-        "0": {
-          "name": "punctuation.section.embedded.begin.flint-ui"
-        }
-      },
-      "end": "%>",
-      "endCaptures": {
-        "0": {
-          "name": "punctuation.section.embedded.end.flint-ui"
-        }
-      },
-      "contentName": "source.flint.embedded.html",
+    "routes": {
       "patterns": [
         {
-          "include": "source.flint"
+          "name": "meta.route.flint-ui",
+          "match": "^\\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*$",
+          "captures": {
+            "1": {
+              "name": "constant.language.http-method.flint-ui"
+            },
+            "2": {
+              "name": "string.quoted.double.route-path.flint-ui"
+            }
+          }
+        }
+      ]
+    },
+    "render": {
+      "patterns": [
+        {
+          "name": "meta.render.command.flint-ui",
+          "match": "^\\s*(window|navbar|layout|sidebar|main|card|block|table|tfoot|menu|list|ol|row|col|toolbar|action_bar|accordion|item|breadcrumb|pagination|steps|tree|group|form|fieldset|footer|tabs|panel|select|dialog|nav\\*?|active|li|head|step|crumb|page|current|tab|tabs_body|option|field|btn|text|title|badge|divider|caption|empty|code|kbd|link|image|stat|alert|status|progress|meter|submit|input|password|number|file|textarea|checkbox|radio|hidden|dialog_trigger|dialog_alert|dialog_confirm|dialog_prompt|end)\\b",
+          "captures": {
+            "1": {
+              "name": "support.function.render.flint-ui"
+            }
+          }
         }
       ]
     }

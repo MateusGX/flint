@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Flint config file">
+  <path d="M6.5 2.5h13.1l6.9 6.9v20.1h-20z" fill="#13171d"/>
+  <path d="M19.6 2.5v6.9h6.9z" fill="#2c3441"/>
+  <path d="M6.5 2.5h13.1l6.9 6.9v20.1h-20z" fill="none" stroke="#566171" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M19.6 2.5v6.9h6.9" fill="none" stroke="#697484" stroke-width=".75" stroke-linejoin="round"/>
+
+  <polygon points="14.7,8.4 20.1,11.2 20.8,16.8 16.8,21.1 11.4,20.3 9.3,14.7" fill="#647080"/>
+  <polygon points="14.7,8.4 20.1,11.2 15.3,14.6 9.3,14.7" fill="#a6b1bd" opacity=".72"/>
+  <polygon points="20.8,16.8 16.8,21.1 11.4,20.3 15.3,14.6" fill="#404958" opacity=".78"/>
+  <polygon points="20.1,11.2 20.8,16.8 15.3,14.6" fill="#596373" opacity=".92"/>
+
+  <path d="M23 13.2l.7 1.9 1.9.6-1.9.6-.7 1.9-.7-1.9-1.9-.6 1.9-.6z" fill="#f6a623"/>
+
+  <circle cx="16" cy="25.5" r="2.75" fill="#f6a623"/>
+  <circle cx="16" cy="25.5" r=".9" fill="#13171d"/>
+  <path d="M16 22.1v1.05M16 27.85v1.05M13.6 23.1l.75.75M17.65 27.15l.75.75M12.6 25.5h1.05M18.35 25.5h1.05M13.6 27.9l.75-.75M17.65 23.85l.75-.75" stroke="#13171d" stroke-width=".7" stroke-linecap="round"/>
+</svg>

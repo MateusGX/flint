@@ -2,164 +2,140 @@
   "UI Page": {
     "prefix": "page",
     "body": [
-      "@page \"${1:/}\"",
-      "<%",
-      "mov r15, \"${2:Dashboard}\"",
-      "ncallr r14, ui.window, r14, r15",
-      "mov r15, \"${3:Welcome}\"",
-      "ncallr r14, ui.text, r14, r15",
-      "ncallr r14, ui.window_end, r14",
-      "%>"
+      "@use \"${1:services/file.fl}\"",
+      "",
+      "section .route",
+      "    ${2|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${3:/}\"",
+      "",
+      "section .render",
+      "    window \"${4:Dashboard}\"",
+      "        title \"${5:Welcome}\"",
+      "        text \"${6:Rendered with Flint UI}\"",
+      "    end"
     ],
-    "description": "Create a Flint UI page."
+    "description": "Create a section-based Flint UI page."
   },
-  "Code Block": {
+  "Route section": {
+    "prefix": "route",
+    "body": [
+      "section .route",
+      "    ${1|GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS|} \"${2:/path}\""
+    ],
+    "description": "Create a UI page route section."
+  },
+  "Text section": {
+    "prefix": "text-section",
+    "body": [
+      "section .text",
+      "    mov r0, \"${1:name}\"",
+      "    ncallr ${2:r1}, http.query, r0"
+    ],
+    "description": "Add raw Flint instructions to a UI page."
+  },
+  "Render section": {
+    "prefix": "render",
+    "body": [
+      "section .render",
+      "    ${1:window} \"${2:Title}\"",
+      "        $0",
+      "    end"
+    ],
+    "description": "Create a Flint UI render section."
+  },
+  "Window": {
+    "prefix": "window",
+    "body": [
+      "window \"${1:Title}\"",
+      "    $0",
+      "end"
+    ],
+    "description": "Open a top-level window frame."
+  },
+  "Card": {
+    "prefix": "card",
+    "body": [
+      "card \"${1:Title}\"",
+      "    $0",
+      "end"
+    ],
+    "description": "Open a bordered card panel."
+  },
+  "Block": {
     "prefix": "block",
     "body": [
-      "<%",
-      "mov r0, \"${1:name}\"",
-      "ncallr ${2:r1}, http.query, r0",
-      "%>"
+      "block \"${1:Title}\"",
+      "    $0",
+      "end"
     ],
-    "description": "Insert a Flint code block."
+    "description": "Open an unframed content section."
   },
-  "ui.window": {
-    "prefix": "ui.window",
+  "Row": {
+    "prefix": "row",
     "body": [
-      "mov r15, \"${1:Title}\"",
-      "ncallr r14, ui.window, r14, r15"
+      "row",
+      "    $0",
+      "end"
     ],
-    "description": "Open a top-level window frame (ui.window)."
+    "description": "Open a responsive row."
   },
-  "ui.window_end": {
-    "prefix": "ui.window_end",
+  "Column": {
+    "prefix": "col",
     "body": [
-      "ncallr r14, ui.window_end, r14"
+      "col",
+      "    $0",
+      "end"
     ],
-    "description": "Close a window frame opened with ui.window."
+    "description": "Open a column."
   },
-  "ui.card": {
-    "prefix": "ui.card",
+  "Title": {
+    "prefix": "title",
     "body": [
-      "mov r15, \"${1:Title}\"",
-      "ncallr r14, ui.card, r14, r15"
+      "title \"${1:Heading}\""
     ],
-    "description": "Open a bordered card panel (ui.card)."
+    "description": "Append a heading."
   },
-  "ui.card_end": {
-    "prefix": "ui.card_end",
+  "Text": {
+    "prefix": "text",
     "body": [
-      "ncallr r14, ui.card_end, r14"
+      "text \"${1:Text}\""
     ],
-    "description": "Close a card panel opened with ui.card."
+    "description": "Append paragraph text."
   },
-  "ui.section": {
-    "prefix": "ui.section",
+  "Field": {
+    "prefix": "field",
     "body": [
-      "mov r15, \"${1:Title}\"",
-      "ncallr r14, ui.section, r14, r15"
+      "field \"${1:Label}\", ${2:r1}"
     ],
-    "description": "Open an unframed content group (ui.section)."
+    "description": "Append a label/value field."
   },
-  "ui.section_end": {
-    "prefix": "ui.section_end",
+  "Button": {
+    "prefix": "btn",
     "body": [
-      "ncallr r14, ui.section_end, r14"
+      "btn \"${1:Label}\", \"${2:/href}\""
     ],
-    "description": "Close a content group opened with ui.section."
+    "description": "Append a link styled as a button."
   },
-  "ui.row": {
-    "prefix": "ui.row",
+  "Form": {
+    "prefix": "form",
     "body": [
-      "ncallr r14, ui.row, r14"
+      "form \"${1|POST,GET,PUT,PATCH,DELETE|}\", \"${2:/submit}\"",
+      "    $0",
+      "end"
     ],
-    "description": "Open a horizontal responsive layout (ui.row)."
+    "description": "Open a form."
   },
-  "ui.row_end": {
-    "prefix": "ui.row_end",
+  "Input": {
+    "prefix": "input",
     "body": [
-      "ncallr r14, ui.row_end, r14"
+      "input \"${1:Label}\", \"${2:name}\""
     ],
-    "description": "Close a layout opened with ui.row."
+    "description": "Append a text input."
   },
-  "ui.column": {
-    "prefix": "ui.column",
+  "Submit": {
+    "prefix": "submit",
     "body": [
-      "ncallr r14, ui.column, r14"
+      "submit \"${1:Save}\""
     ],
-    "description": "Open a vertical layout (ui.column)."
-  },
-  "ui.column_end": {
-    "prefix": "ui.column_end",
-    "body": [
-      "ncallr r14, ui.column_end, r14"
-    ],
-    "description": "Close a layout opened with ui.column."
-  },
-  "ui.title": {
-    "prefix": "ui.title",
-    "body": [
-      "mov r15, \"${1:Heading}\"",
-      "ncallr r14, ui.title, r14, r15"
-    ],
-    "description": "Append a heading (ui.title)."
-  },
-  "ui.text": {
-    "prefix": "ui.text",
-    "body": [
-      "mov r15, \"${1:Text}\"",
-      "ncallr r14, ui.text, r14, r15"
-    ],
-    "description": "Append a paragraph (ui.text)."
-  },
-  "ui.field": {
-    "prefix": "ui.field",
-    "body": [
-      "mov r15, \"${1:Label}\"",
-      "ncallr r14, ui.field, r14, r15, ${2:r1}"
-    ],
-    "description": "Append a label/value display row (ui.field)."
-  },
-  "ui.button": {
-    "prefix": "ui.button",
-    "body": [
-      "mov r15, \"${1:Label}\"",
-      "mov r1, \"${2:/href}\"",
-      "ncallr r14, ui.button, r14, r15, r1"
-    ],
-    "description": "Append a link styled as a button (ui.button)."
-  },
-  "ui.form": {
-    "prefix": "ui.form",
-    "body": [
-      "mov r15, \"${1|POST,GET,PUT,PATCH,DELETE|}\"",
-      "mov r1, \"${2:/submit}\"",
-      "ncallr r14, ui.form, r14, r15, r1"
-    ],
-    "description": "Open an HTML form (ui.form)."
-  },
-  "ui.form_end": {
-    "prefix": "ui.form_end",
-    "body": [
-      "ncallr r14, ui.form_end, r14"
-    ],
-    "description": "Close a form opened with ui.form."
-  },
-  "ui.input": {
-    "prefix": "ui.input",
-    "body": [
-      "mov r15, \"${1:Label}\"",
-      "mov r1, \"${2:name}\"",
-      "ncallr r14, ui.input, r14, r15, r1"
-    ],
-    "description": "Append a labeled text input inside a form (ui.input)."
-  },
-  "ui.submit": {
-    "prefix": "ui.submit",
-    "body": [
-      "mov r15, \"${1:Save}\"",
-      "ncallr r14, ui.submit, r14, r15"
-    ],
-    "description": "Append a submit button inside a form (ui.submit)."
+    "description": "Append a submit button."
   }
 }

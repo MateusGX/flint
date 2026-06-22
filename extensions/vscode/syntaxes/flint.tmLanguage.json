@@ -78,21 +78,18 @@
       "patterns": [
         {
           "name": "meta.route.flint",
-          "match": "^\\s*(route)\\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*(->)\\s*([A-Za-z_][A-Za-z0-9_.]*)",
+          "match": "^\\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\s+(\"(?:\\\\[nt\"\\\\]|[^\"])*\")\\s*(->)\\s*([A-Za-z_][A-Za-z0-9_.]*)",
           "captures": {
             "1": {
-              "name": "keyword.control.route.flint"
-            },
-            "2": {
               "name": "constant.language.http-method.flint"
             },
-            "3": {
+            "2": {
               "name": "string.quoted.double.route-path.flint"
             },
-            "4": {
+            "3": {
               "name": "keyword.operator.arrow.flint"
             },
-            "5": {
+            "4": {
               "name": "entity.name.function.handler.flint"
             }
           }
@@ -119,7 +116,7 @@
       "patterns": [
         {
           "name": "meta.section.flint",
-          "match": "^\\s*(section)\\s+(\\.text|\\.data|\\.bss)\\b",
+          "match": "^\\s*(section)\\s+(\\.route|\\.text|\\.data|\\.bss)\\b",
           "captures": {
             "1": {
               "name": "keyword.control.section.flint"
@@ -159,7 +156,7 @@
       "patterns": [
         {
           "name": "support.function.native.flint",
-          "match": "\\b(debug\\.print|env\\.get|crypto\\.uuid|time\\.now|math\\.(abs|min|max|floor|ceil|sqrt|pow|random|rand_int)|string\\.(concat|len|equals|contains|starts_with|ends_with|escape_html|slice|replace|split|trim|to_upper|to_lower|to_int|from_int|from)|json\\.(parse|stringify|object|array|from_int|from_str|to_int|to_str|get|set|push|len|has|type|delete|keys|bool|null|merge)|ui\\.(window|window_end|card|card_end|section|section_end|row|row_end|column|column_end|title|text|field|button|form|form_end|input|submit)|http\\.(method|path|body|param|query|header|cookie|json_body|form|set_status|set_header|set_cookie|text|html|json|redirect|abort))\\b"
+          "match": "\\b(debug|string|json|math|time|env|crypto|ui|http)\\.[A-Za-z_][A-Za-z0-9_]*\\b"
         }
       ]
     },

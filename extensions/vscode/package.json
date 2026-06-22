@@ -1,8 +1,8 @@
 {
   "name": "flint-vscode",
   "displayName": "Flint Language",
-  "description": "Language support for Flint route modules, HTML pages, and UI pages.",
-  "version": "0.1.1",
+  "description": "Language support for Flint route modules and UI pages.",
+  "version": "0.2.0",
   "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",
@@ -12,7 +12,10 @@
     "directory": "extensions/vscode"
   },
   "main": "./out/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:flint",
+    "onLanguage:flint-ui"
+  ],
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
@@ -28,14 +31,15 @@
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Themes"
   ],
   "keywords": [
     "flint",
     "assembly",
     "bytecode",
     "http",
-    "templates"
+    "ui"
   ],
   "contributes": {
     "languages": [
@@ -51,17 +55,6 @@
         "configuration": "./language-configuration.json"
       },
       {
-        "id": "flint-html",
-        "aliases": [
-          "Flint HTML",
-          "flint-html"
-        ],
-        "extensions": [
-          ".flint.html"
-        ],
-        "configuration": "./page-language-configuration.json"
-      },
-      {
         "id": "flint-ui",
         "aliases": [
           "Flint UI",
@@ -70,7 +63,7 @@
         "extensions": [
           ".flint.ui"
         ],
-        "configuration": "./page-language-configuration.json"
+        "configuration": "./ui-language-configuration.json"
       }
     ],
     "grammars": [
@@ -80,22 +73,9 @@
         "path": "./syntaxes/flint.tmLanguage.json"
       },
       {
-        "language": "flint-html",
-        "scopeName": "text.html.flint",
-        "path": "./syntaxes/flint-html.tmLanguage.json",
-        "embeddedLanguages": {
-          "source.flint.embedded.html": "flint",
-          "text.html.basic": "html"
-        }
-      },
-      {
         "language": "flint-ui",
-        "scopeName": "text.html.flint-ui",
-        "path": "./syntaxes/flint-ui.tmLanguage.json",
-        "embeddedLanguages": {
-          "source.flint.embedded.html": "flint",
-          "text.html.basic": "html"
-        }
+        "scopeName": "source.flint-ui",
+        "path": "./syntaxes/flint-ui.tmLanguage.json"
       }
     ],
     "snippets": [
@@ -104,20 +84,19 @@
         "path": "./snippets/flint.code-snippets"
       },
       {
-        "language": "flint-html",
-        "path": "./snippets/flint-html.code-snippets"
-      },
-      {
         "language": "flint-ui",
         "path": "./snippets/flint-ui.code-snippets"
       }
     ],
+    "iconThemes": [
+      {
+        "id": "flint-icons",
+        "label": "Flint Icons",
+        "path": "./icons/flint-icon-theme.json"
+      }
+    ],
     "configurationDefaults": {
       "[flint]": {
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true
-      },
-      "[flint-html]": {
         "editor.tabSize": 4,
         "editor.insertSpaces": true
       },
