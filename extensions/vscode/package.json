@@ -2,7 +2,7 @@
   "name": "flint-vscode",
   "displayName": "Flint Language",
   "description": "Language support for Flint route modules and UI pages.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",

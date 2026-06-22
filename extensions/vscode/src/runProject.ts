@@ -28,7 +28,7 @@ async function runProject(resource?: vscode.Uri): Promise<void> {
   }
 
   const cliPath = vscode.workspace.getConfiguration("flint").get<string>("cliPath", "flint").trim();
-  const command = `${quoteCommand(cliPath || "flint")} run`;
+  const command = `${quoteCommand(cliPath || "flint")} serve`;
   const { terminal, isNew } = terminalFor(projectRoot);
 
   terminal.show();
