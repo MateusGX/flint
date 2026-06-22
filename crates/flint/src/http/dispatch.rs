@@ -168,19 +168,46 @@ fn log_request(exchange: &HttpExchange, handler_address: usize, elapsed_ms: f64)
 
     if level >= LogLevel::Debug {
         if !exchange.params.is_empty() {
-            let mut pairs: Vec<_> = exchange.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
+            let mut pairs: Vec<_> = exchange
+                .params
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect();
             pairs.sort();
-            println!("       {}params{}   {}", log::DIM, log::RESET, pairs.join("  "));
+            println!(
+                "       {}params{}   {}",
+                log::DIM,
+                log::RESET,
+                pairs.join("  ")
+            );
         }
         if !exchange.query.is_empty() {
-            let mut pairs: Vec<_> = exchange.query.iter().map(|(k, v)| format!("{k}={v}")).collect();
+            let mut pairs: Vec<_> = exchange
+                .query
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect();
             pairs.sort();
-            println!("       {}query{}    {}", log::DIM, log::RESET, pairs.join("  "));
+            println!(
+                "       {}query{}    {}",
+                log::DIM,
+                log::RESET,
+                pairs.join("  ")
+            );
         }
         if !exchange.body.is_empty() {
-            println!("       {}body{}     {} bytes", log::DIM, log::RESET, exchange.body.len());
+            println!(
+                "       {}body{}     {} bytes",
+                log::DIM,
+                log::RESET,
+                exchange.body.len()
+            );
         }
-        println!("       {}handler{}  0x{handler_address:x}", log::DIM, log::RESET);
+        println!(
+            "       {}handler{}  0x{handler_address:x}",
+            log::DIM,
+            log::RESET
+        );
     }
 }
 

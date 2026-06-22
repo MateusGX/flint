@@ -68,11 +68,17 @@ impl CompiledPageSource {
         use crate::lang::preprocessor;
 
         preprocessor::validate_sections(&self.source).map_err(|msg| {
-            crate::lang::Error::Compile(CompileError { line: 1, message: msg })
+            crate::lang::Error::Compile(CompileError {
+                line: 1,
+                message: msg,
+            })
         })?;
         let normalized = preprocessor::normalize_sections(&self.source);
         let expanded = preprocessor::expand(&normalized, project_root).map_err(|e| {
-            crate::lang::Error::Compile(CompileError { line: 1, message: e.to_string() })
+            crate::lang::Error::Compile(CompileError {
+                line: 1,
+                message: e.to_string(),
+            })
         })?;
         crate::lang::compile_app_source_raw(&expanded)
     }

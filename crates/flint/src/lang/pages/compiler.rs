@@ -29,8 +29,7 @@ use std::path::Path;
 
 use super::paths::{handler_name, infer_route_path};
 use super::source::{
-    append_handler_end, append_handler_start, append_route_section, append_uses,
-    emit_section_lines,
+    append_handler_end, append_handler_start, append_route_section, append_uses, emit_section_lines,
 };
 use super::{CompiledPageSource, PageCompileError};
 

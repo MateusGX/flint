@@ -17,14 +17,17 @@ pub enum LogLevel {
     Debug = 4,
 }
 
-impl LogLevel {
-    pub fn from_str(s: &str) -> Self {
+impl std::str::FromStr for LogLevel {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "off" => Self::Off,
-            "error" => Self::Error,
-            "warn" => Self::Warn,
-            "debug" => Self::Debug,
-            _ => Self::Info,
+            "off" => Ok(Self::Off),
+            "error" => Ok(Self::Error),
+            "warn" => Ok(Self::Warn),
+            "info" => Ok(Self::Info),
+            "debug" => Ok(Self::Debug),
+            _ => Err(()),
         }
     }
 }

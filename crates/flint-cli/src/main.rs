@@ -179,7 +179,13 @@ async fn cmd_serve(args: &[String]) {
             process::exit(1);
         });
 
-    flint::log::set(flint::log::LogLevel::from_str(&config.server.log));
+    flint::log::set(
+        config
+            .server
+            .log
+            .parse()
+            .unwrap_or(flint::log::LogLevel::Info),
+    );
     if let Err(e) = flint::http::serve_with_ready(modules, addr, |addr| {
         println!(
             "  {bold}{}{reset} v{}  →  {bold}http://{addr}{reset}",
@@ -212,7 +218,7 @@ async fn serve_bytecode(path: &Path) {
         });
 
     let log_level = std::env::var("FLINT_LOG").unwrap_or_else(|_| "info".to_string());
-    flint::log::set(flint::log::LogLevel::from_str(&log_level));
+    flint::log::set(log_level.parse().unwrap_or(flint::log::LogLevel::Info));
     if let Err(e) = flint::http::serve_with_ready(project.modules, addr, |addr| {
         println!(
             "  {bold}{}{reset} v{}  ->  {bold}http://{addr}{reset}",

@@ -121,8 +121,8 @@ pub async fn serve_with_ready(
     addr: SocketAddr,
     ready: impl FnOnce(SocketAddr),
 ) -> std::io::Result<()> {
-    let app = router(modules)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    let app =
+        router(modules).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
     ready(addr);
