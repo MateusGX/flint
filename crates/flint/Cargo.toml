@@ -1,6 +1,6 @@
 [package]
 name = "flint"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "flint: a small assembly-like language, its VM, standard library and HTTP server"
 
@@ -9,8 +9,6 @@ serde_json = "1"
 axum = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["trace"] }
-tracing = "0.1"
 form_urlencoded = "1"
 rand = "0.8"
 uuid = { version = "1", features = ["v4"] }

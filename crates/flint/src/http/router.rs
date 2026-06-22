@@ -14,7 +14,6 @@ use axum::extract::Path;
 use axum::http::{HeaderMap, Method, Uri};
 use axum::routing::{delete, get, head, options, patch, post, put, MethodRouter};
 use axum::Router;
-use tower_http::trace::TraceLayer;
 
 use crate::http::dispatch::dispatch;
 
@@ -35,19 +34,11 @@ impl std::error::Error for RouterError {}
 /// `modules`.
 ///
 /// The result is a plain `axum::Router` — apply your own `tower::Layer`s
-/// with `.layer(...)`, exactly as you would for any other axum app (request
-/// logging via `tower_http::trace::TraceLayer`, auth, rate limiting, ...).
-/// This is the framework's extension point for cross-cutting request
-/// concerns: no bespoke middleware system to learn, just the `tower`
-/// ecosystem every Rust backend developer already knows.
-///
-/// [`serve`] wraps this with a sensible default (`TraceLayer`) for the
-/// common case.
+/// with `.layer(...)`, exactly as you would for any other axum app (auth,
+/// rate limiting, ...). This is the framework's extension point for
+/// cross-cutting request concerns: no bespoke middleware system to learn,
+/// just the `tower` ecosystem every Rust backend developer already knows.
 pub fn router(modules: Vec<AppModule>) -> Result<Router, RouterError> {
-    build_router(modules)
-}
-
-pub fn try_router(modules: Vec<AppModule>) -> Result<Router, RouterError> {
     build_router(modules)
 }
 
@@ -120,10 +111,7 @@ fn build_router(modules: Vec<AppModule>) -> Result<Router, RouterError> {
     Ok(router)
 }
 
-/// Builds the router (with [`router`]) and serves it on `addr`, applying
-/// `TraceLayer::new_for_http()` for request logging — the framework's
-/// default demonstration of the "extend via `tower::Layer`" pattern. Build
-/// and layer your own router with [`router`] for full control.
+/// Builds the router (with [`router`]) and serves it on `addr`.
 pub async fn serve(modules: Vec<AppModule>, addr: SocketAddr) -> std::io::Result<()> {
     serve_with_ready(modules, addr, |_| {}).await
 }
@@ -133,13 +121,11 @@ pub async fn serve_with_ready(
     addr: SocketAddr,
     ready: impl FnOnce(SocketAddr),
 ) -> std::io::Result<()> {
-    let app = try_router(modules)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?
-        .layer(TraceLayer::new_for_http());
+    let app = router(modules)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
     ready(addr);
-    tracing::info!(%addr, "Flint listening");
     axum::serve(listener, app).await
 }
 

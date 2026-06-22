@@ -33,8 +33,15 @@ pub struct Server {
     pub services: String,
     #[serde(default = "default_repositories")]
     pub repositories: String,
-    // services and repositories are resolved via `use` directives in .fl files;
-    // these fields document the convention and are available for tooling.
+    #[serde(default = "default_components")]
+    pub components: String,
+    // services, repositories, and components are resolved via `use`/`@use`
+    // directives in .fl and .flint.ui files; these fields document the
+    // convention and are available for tooling.
+    /// Verbosity of the built-in request logger.
+    /// Values: `"off"` | `"error"` | `"warn"` | `"info"` (default) | `"debug"`
+    #[serde(default = "default_log")]
+    pub log: String,
 }
 
 impl Default for Server {
@@ -46,6 +53,8 @@ impl Default for Server {
             pages: default_pages(),
             services: default_services(),
             repositories: default_repositories(),
+            components: default_components(),
+            log: default_log(),
         }
     }
 }
@@ -60,16 +69,22 @@ fn default_port() -> u16 {
     3000
 }
 fn default_routes() -> String {
-    "routes".into()
+    "api".into()
 }
 fn default_pages() -> String {
-    "pages".into()
+    "app".into()
 }
 fn default_services() -> String {
     "services".into()
 }
 fn default_repositories() -> String {
     "repositories".into()
+}
+fn default_components() -> String {
+    "components".into()
+}
+fn default_log() -> String {
+    "info".into()
 }
 
 /// Reads and parses an `flint.toml` file.

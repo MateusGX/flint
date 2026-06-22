@@ -10,5 +10,11 @@
 
 pub mod http;
 pub mod lang;
+pub mod log;
 pub mod stdlib;
 pub mod vm;
+
+/// Raw CSS for Flint's built-in UI theme (no `<style>` wrapper).
+pub use stdlib::UI_CSS;
+/// Full `<script>…</script>` block for Flint's built-in UI interactivity.
+pub use stdlib::UI_JS;

@@ -1,21 +1,33 @@
 use std::path::PathBuf;
 
+use crate::util::{escape, toml_string};
+
 pub fn minimal(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
-        (PathBuf::from("routes/hello.fl"), hello(name)),
-        (PathBuf::from("pages/index.flint.ui"), home_page(name)),
+        (PathBuf::from("api/hello.fl"), hello(name)),
+        (PathBuf::from("app/index.flint.ui"), home_page(name)),
     ]
 }
 
 pub fn tasks(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
-        (PathBuf::from("routes/tasks.fl"), tasks_controller()),
+        (PathBuf::from("api/tasks.fl"), tasks_controller()),
         (PathBuf::from("services/tasks.fl"), tasks_service()),
         (PathBuf::from("repositories/tasks.fl"), tasks_repository()),
-        (PathBuf::from("routes/hello.fl"), hello(name)),
-        (PathBuf::from("pages/index.flint.ui"), home_page(name)),
+        (PathBuf::from("api/hello.fl"), hello(name)),
+        (PathBuf::from("components/navbar.fl"), tasks_navbar(name)),
+        (PathBuf::from("app/index.flint.ui"), home_page(name)),
+    ]
+}
+
+pub fn site(name: &str) -> Vec<(PathBuf, String)> {
+    vec![
+        (PathBuf::from("flint.toml"), manifest(name)),
+        (PathBuf::from("components/navbar.fl"), site_navbar()),
+        (PathBuf::from("app/index.flint.ui"), static_home_page(name)),
+        (PathBuf::from("app/about.flint.ui"), static_about_page(name)),
     ]
 }
 
@@ -29,78 +41,138 @@ name    = {name}
 version = "0.1.0"
 
 [server]
-host        = "127.0.0.1"
-port        = 3000
-routes      = "routes"
-pages       = "pages"
-services    = "services"
+host         = "127.0.0.1"
+port         = 3000
+routes       = "api"
+pages        = "app"
+services     = "services"
 repositories = "repositories"
+components   = "components"
 "#
     )
 }
 
 fn hello(name: &str) -> String {
-    let name = flint_string_literal(name);
+    let name = escape(name);
     format!(
-        r#"say_hello:
+        r#"section .route
+    GET "/hello" -> say_hello
+
+section .text
+say_hello:
     mov r0, "Hello from {name}!"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 "#
     )
 }
 
 fn home_page(name: &str) -> String {
-    let name = flint_string_literal(name);
+    let name = escape(name);
     format!(
-        r#"@page "/"
-<%
-mov r15, "{name}"
-ncallr r14, ui.window, r14, r15
-mov r15, "This page was rendered from pages/index.flint.ui without writing HTML."
-ncallr r14, ui.text, r14, r15
-mov r15, "Next steps"
-ncallr r14, ui.card, r14, r15
-mov r15, "Use UI controls for server-rendered pages, or .flint.html when you want full HTML."
-ncallr r14, ui.text, r14, r15
-mov r15, "Open the API route"
-mov r1, "/hello"
-ncallr r14, ui.button, r14, r15, r1
-ncallr r14, ui.card_end, r14
-ncallr r14, ui.window_end, r14
-%>
+        r#"@use "components/navbar.fl"
+
+section .route
+    GET "/"
+
+section .render
+    window "{name}"
+        call app_navbar
+        card "Next steps"
+            text "This page was rendered from app/index.flint.ui without writing HTML."
+            btn "Open the API route", "/hello"
+            btn "View tasks", "/tasks"
+        end
+    end
 "#
     )
 }
 
-fn toml_string(value: &str) -> String {
-    format!("\"{}\"", escape_common_string(value))
+fn tasks_navbar(name: &str) -> String {
+    let name = escape(name);
+    format!(
+        r#"section .text
+app_navbar:
+    ncallr r14, ui.navbar, r14
+    mov r15, "{name}"
+    mov r13, "/"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    mov r15, "Tasks"
+    mov r13, "/tasks"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    mov r15, "API"
+    mov r13, "/hello"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    ncallr r14, ui.navbar_end, r14
+    ret
+"#
+    )
 }
 
-fn flint_string_literal(value: &str) -> String {
-    escape_common_string(value)
+fn site_navbar() -> String {
+    r#"section .text
+site_navbar:
+    ncallr r14, ui.navbar, r14
+    mov r15, "Home"
+    mov r13, "/"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    mov r15, "About"
+    mov r13, "/about"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    ncallr r14, ui.navbar_end, r14
+    ret
+"#
+    .to_string()
 }
 
-fn escape_common_string(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => escaped.push_str("\\\\"),
-            '"' => escaped.push_str("\\\""),
-            '\n' => escaped.push_str("\\n"),
-            '\t' => escaped.push_str("\\t"),
-            '\r' => escaped.push_str("\\r"),
-            other => escaped.push(other),
-        }
-    }
-    escaped
+fn static_home_page(name: &str) -> String {
+    let name = escape(name);
+    format!(
+        r#"@use "components/navbar.fl"
+
+section .route
+    GET "/"
+
+section .render
+    window "{name}"
+        call site_navbar
+        card "Welcome"
+            text "This is a static Flint UI site."
+            btn "About", "/about"
+        end
+    end
+"#
+    )
+}
+
+fn static_about_page(name: &str) -> String {
+    let name = escape(name);
+    format!(
+        r#"@use "components/navbar.fl"
+
+section .route
+    GET "/about"
+
+section .render
+    window "About {name}"
+        call site_navbar
+        card "About"
+            text "Run flint build --static to export this page to dist/about/index.html."
+        end
+    end
+"#
+    )
 }
 
 fn tasks_controller() -> String {
     r#"use "services/tasks.fl"
 
+section .route
+    GET  "/tasks"     -> tasks_controller_list
+    GET  "/tasks/:id" -> tasks_controller_get
+    POST "/tasks"     -> tasks_controller_create
+
+section .text
 tasks_controller_list:
     call tasks_service_list
     ncall http.json, r0
@@ -111,7 +183,7 @@ tasks_controller_get:
     ncallr r0, http.param, r0
     call tasks_service_get
     cmp r1, 1
-    je tasks_get_found
+    je tasks_controller_get_found
     mov r1, 404
     ncall http.set_status, r1
     ncallr r1, json.object
@@ -119,31 +191,27 @@ tasks_controller_get:
     mov r3, "not found"
     ncallr r1, json.set, r1, r2, r3
     ncall http.json, r1
-    jmp tasks_get_done
-tasks_get_found:
+    jmp tasks_controller_get_done
+tasks_controller_get_found:
     ncall http.json, r0
-tasks_get_done:
+tasks_controller_get_done:
     ret
 
 tasks_controller_create:
     ncallr r0, http.json_body
     call tasks_service_create
     cmp r1, 1
-    je tasks_create_ok
+    je tasks_controller_create_ok
     mov r2, 400
     ncall http.set_status, r2
     ncall http.json, r0
-    jmp tasks_create_done
-tasks_create_ok:
+    jmp tasks_controller_create_done
+tasks_controller_create_ok:
     mov r2, 201
     ncall http.set_status, r2
     ncall http.json, r0
-tasks_create_done:
+tasks_controller_create_done:
     ret
-
-route GET  "/tasks"     -> tasks_controller_list
-route GET  "/tasks/:id" -> tasks_controller_get
-route POST "/tasks"     -> tasks_controller_create
 "#
     .to_string()
 }
@@ -151,6 +219,7 @@ route POST "/tasks"     -> tasks_controller_create
 fn tasks_service() -> String {
     r#"use "repositories/tasks.fl"
 
+section .text
 tasks_service_list:
     call tasks_repository_all
     ret
@@ -187,7 +256,8 @@ tasks_service_create_ok:
 }
 
 fn tasks_repository() -> String {
-    r#"tasks_repository_all:
+    r#"section .text
+tasks_repository_all:
     mov r0, "{\"1\":{\"id\":\"1\",\"title\":\"Buy milk\",\"done\":false},\"2\":{\"id\":\"2\",\"title\":\"Walk the dog\",\"done\":true}}"
     ncallr r0, json.parse, r0
     ret
@@ -203,5 +273,6 @@ tasks_repository_create:
     mov r2, "3"
     ncallr r0, json.set, r0, r1, r2
     ret
-"#.to_string()
+"#
+    .to_string()
 }

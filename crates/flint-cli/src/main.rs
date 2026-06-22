@@ -3,9 +3,12 @@
 use std::{net::SocketAddr, path::Path, process};
 
 mod build;
+mod bytecode;
 mod config;
 mod out;
+mod site;
 mod templates;
+mod util;
 
 #[tokio::main]
 async fn main() {
@@ -38,14 +41,16 @@ fn print_help() {
 {bold}Usage:{reset}
   flint new <name>                   scaffold a new project
   flint new <name> --template tasks  scaffold with the tasks API example
-  flint serve [dir]                  start the development server
-  flint build [dir]                  compile a standalone release binary
+  flint serve [dir|file.flintbc]     start the development server
+  flint build [dir]                  compile portable bytecode into dist/
+  flint build --static [dir]         export app/*.flint.ui to static HTML
   flint version                      print the version
 
 {bold}Templates:{reset}
   minimal   a single GET /hello route  (default)
   tasks     GET /tasks, GET /tasks/:id, POST /tasks, showing controllers,
             services and repositories
+  static    UI-only project for static HTML export
 
 {bold}Project file (flint.toml):{reset}
   [project]
@@ -55,8 +60,8 @@ fn print_help() {
   [server]
   host   = \"127.0.0.1\"
   port   = 3000
-  routes = \"routes\"
-  pages  = \"pages\"",
+  routes = \"api\"
+  pages  = \"app\"",
         bold = out::BOLD,
         reset = out::RESET,
         ver = env!("CARGO_PKG_VERSION"),
@@ -96,9 +101,10 @@ fn cmd_new(args: &[String]) {
     let files = match template {
         "minimal" => templates::minimal(&name),
         "tasks" => templates::tasks(&name),
+        "static" => templates::site(&name),
         other => {
             out::error(format!("unknown template '{other}'"));
-            eprintln!("  available: minimal, tasks");
+            eprintln!("  available: minimal, tasks, static");
             process::exit(1);
         }
     };
@@ -121,7 +127,11 @@ fn cmd_new(args: &[String]) {
     println!();
     println!("  get started:");
     println!("    {}cd {name}{}", out::BOLD, out::RESET);
-    println!("    {}flint serve{}", out::BOLD, out::RESET);
+    if template == "static" {
+        println!("    {}flint build --static{}", out::BOLD, out::RESET);
+    } else {
+        println!("    {}flint serve{}", out::BOLD, out::RESET);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -130,17 +140,26 @@ fn cmd_new(args: &[String]) {
 
 async fn cmd_serve(args: &[String]) {
     let dir = resolve_project_dir(args);
+    if bytecode::is_bytecode_path(&dir) {
+        serve_bytecode(&dir).await;
+        return;
+    }
+
     let config = load_config(&dir);
     let routes_dir = dir.join(&config.server.routes);
     let pages_dir = dir.join(&config.server.pages);
 
-    let mut modules = flint::lang::load_app_dir(&routes_dir, &dir).unwrap_or_else(|e| {
-        out::error(format!(
-            "failed to load routes from '{}': {e}",
-            routes_dir.display()
-        ));
-        process::exit(1);
-    });
+    let mut modules = if routes_dir.exists() {
+        flint::lang::load_app_dir(&routes_dir, &dir).unwrap_or_else(|e| {
+            out::error(format!(
+                "failed to load routes from '{}': {e}",
+                routes_dir.display()
+            ));
+            process::exit(1);
+        })
+    } else {
+        Vec::new()
+    };
     let mut page_modules = flint::lang::load_pages_dir(&pages_dir, &dir).unwrap_or_else(|e| {
         out::error(format!(
             "failed to load pages from '{}': {e}",
@@ -160,12 +179,45 @@ async fn cmd_serve(args: &[String]) {
             process::exit(1);
         });
 
-    tracing_subscriber::fmt::init();
+    flint::log::set(flint::log::LogLevel::from_str(&config.server.log));
     if let Err(e) = flint::http::serve_with_ready(modules, addr, |addr| {
         println!(
             "  {bold}{}{reset} v{}  →  {bold}http://{addr}{reset}",
             config.project.name,
             config.project.version,
+            bold = out::BOLD,
+            reset = out::RESET,
+        );
+    })
+    .await
+    {
+        out::error(format!("server: {e}"));
+        process::exit(1);
+    }
+}
+
+async fn serve_bytecode(path: &Path) {
+    let project = bytecode::read_project(path).unwrap_or_else(|e| {
+        out::error(e);
+        process::exit(1);
+    });
+
+    let addr: SocketAddr = std::env::var("FLINT_ADDR")
+        .or_else(|_| std::env::var("ASMB_ADDR"))
+        .unwrap_or_else(|_| "0.0.0.0:3000".to_string())
+        .parse()
+        .unwrap_or_else(|_| {
+            out::error("invalid FLINT_ADDR");
+            process::exit(1);
+        });
+
+    let log_level = std::env::var("FLINT_LOG").unwrap_or_else(|_| "info".to_string());
+    flint::log::set(flint::log::LogLevel::from_str(&log_level));
+    if let Err(e) = flint::http::serve_with_ready(project.modules, addr, |addr| {
+        println!(
+            "  {bold}{}{reset} v{}  ->  {bold}http://{addr}{reset}",
+            project.name,
+            project.version,
             bold = out::BOLD,
             reset = out::RESET,
         );
@@ -186,6 +238,14 @@ fn cmd_build(args: &[String]) {
     let config = load_config(&dir);
     let routes_dir = dir.join(&config.server.routes);
     let pages_dir = dir.join(&config.server.pages);
+
+    if args.iter().any(|arg| arg == "--static") {
+        site::run(&dir, &pages_dir, &config.project.name).unwrap_or_else(|e| {
+            out::error(e);
+            process::exit(1);
+        });
+        return;
+    }
 
     build::run(
         &dir,
