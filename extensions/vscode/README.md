@@ -15,6 +15,9 @@ Language support for Flint route modules and Flint UI pages.
   and documentation.
 - Autocomplete for `use`/`@use` paths, section names, HTTP methods, local
   labels, and Flint UI render commands.
+- `Flint: Run Project` command and editor play button for `.fl` and
+  `.flint.ui` files. The command finds the nearest `flint.toml` and runs
+  `flint run` in an integrated terminal.
 - Default file icons for `.fl`, `.flint.ui`, and `.flintbc` without changing
   the user's active file icon theme.
 
@@ -67,6 +70,16 @@ placeholders, and `r0`-`r15` complete as registers.
 and route targets / jump targets complete labels declared in the current file.
 In `.flint.ui`, `section .render` completes the current render DSL commands
 such as `window`, `card`, `field`, `btn`, `form`, and `end`.
+
+## Run Project
+
+Open a Flint source file and click the play icon in the editor title bar, or
+run `Flint: Run Project` from the Command Palette. The extension searches up
+from the active file for `flint.toml`, starts a dedicated terminal in that
+folder, and executes `flint run`.
+
+If your CLI is not available as `flint` on `PATH`, set `flint.cliPath` to the
+executable path.
 
 ## Development
 

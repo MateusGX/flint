@@ -2,7 +2,7 @@
   "name": "flint-vscode",
   "displayName": "Flint Language",
   "description": "Language support for Flint route modules and UI pages.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",
@@ -14,7 +14,8 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onLanguage:flint",
-    "onLanguage:flint-ui"
+    "onLanguage:flint-ui",
+    "onCommand:flint.runProject"
   ],
   "scripts": {
     "compile": "tsc -p ./",
@@ -41,6 +42,40 @@
     "ui"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "flint.runProject",
+        "title": "Run Project",
+        "category": "Flint",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "flint.runProject",
+          "when": "resourceLangId == flint || resourceLangId == 'flint-ui'",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "flint.runProject",
+          "when": "resourceLangId == flint || resourceLangId == 'flint-ui'",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Flint",
+      "properties": {
+        "flint.cliPath": {
+          "type": "string",
+          "default": "flint",
+          "description": "Path to the Flint CLI executable used by the Run Project command."
+        }
+      }
+    },
     "languages": [
       {
         "id": "flint",
