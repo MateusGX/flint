@@ -18,6 +18,8 @@ HTML sites.
 | `flint run <file.flintbc>` | Alias for serving a bytecode artifact. |
 | `flint build [dir]` | Compile portable bytecode into `dist/`. |
 | `flint build --static [dir]` | Export `app/**/*.flint.ui` to static HTML in `dist/`. |
+| `flint update` | Update the CLI to the latest release. |
+| `flint upgrade` | Alias for `flint update`. |
 | `flint version` | Print the CLI version. |
 | `flint --version` | Print the CLI version. |
 | `flint -V` | Print the CLI version. |
@@ -41,6 +43,7 @@ pages        = "app"
 services     = "services"
 repositories = "repositories"
 components   = "components"
+log          = "info"
 ```
 
 ## Defaults
@@ -57,6 +60,7 @@ If optional fields are missing, the CLI uses:
 | `server.services` | `"services"` |
 | `server.repositories` | `"repositories"` |
 | `server.components` | `"components"` |
+| `server.log` | `"info"` |
 
 `services`, `repositories`, and `components` document the project convention.
 They are not loaded automatically; include files from them with `use` (in `.fl`
@@ -75,6 +79,8 @@ my-app/
 ├── flint.toml
 ├── app/
 │   └── index.flint.ui
+├── components/
+│   └── navbar.fl
 └── api/
     └── hello.fl
 ```
@@ -97,6 +103,8 @@ my-app/
 ├── api/
 │   ├── hello.fl
 │   └── tasks.fl
+├── components/
+│   └── navbar.fl
 ├── services/
 │   └── tasks.fl
 └── repositories/
@@ -154,7 +162,7 @@ The command:
 2. loads route modules from `server.routes`
 3. loads UI page files from `server.pages`
 4. binds to `server.host:server.port`
-5. serves with request tracing enabled
+5. starts the built-in request logger at the configured `server.log` level
 
 When given a `.flintbc` file, `serve` skips source loading and executes the
 compiled bytecode directly.
@@ -214,6 +222,84 @@ dist/flint.js
 ```
 
 Each generated HTML file links to those assets with the correct relative path.
+
+## Logging
+
+The built-in request logger is configured via `server.log` in `flint.toml`:
+
+```toml
+[server]
+log = "info"   # off | error | warn | info | debug
+```
+
+| Level | What is logged |
+|---|---|
+| `off` | Nothing |
+| `error` | VM runtime errors (HTTP 500 responses) |
+| `warn` | Errors and slow requests (> 1 s) |
+| `info` | All requests — one line each with method, path, status, and latency *(default)* |
+| `debug` | All requests, plus path params, query string, body size, and handler address |
+
+Example output at `info` level:
+
+```
+  →  GET /tasks     200  1.2ms
+  →  GET /tasks/42  404  0.8ms
+  →  POST /tasks    201  2.1ms
+```
+
+Example output at `debug` level:
+
+```
+  →  GET /tasks/42  200  1.2ms
+       params   id=42
+       query    page=1
+       body     0 bytes
+       handler  0x2a
+```
+
+When running a `.flintbc` bytecode artifact (no `flint.toml`), the log level
+is read from the `FLINT_LOG` environment variable. Unrecognised values and
+missing variables fall back to `info`.
+
+```sh
+FLINT_LOG=debug flint run dist/my-app.flintbc
+```
+
+## Update
+
+```sh
+flint update
+```
+
+Fetches the latest release version from GitHub, compares it against the
+installed version, and re-runs the install script if an update is available:
+
+```
+  current  0.2.0
+  latest   0.3.0
+
+  Updating to 0.3.0...
+```
+
+If the installed version is already the latest:
+
+```
+  current  0.3.0
+  latest   0.3.0
+
+  Already up to date.
+```
+
+`flint upgrade` is an alias for `flint update`. The command requires `curl`
+and a shell — the same prerequisites as the original install script.
+
+To install a specific version instead of the latest, re-run the install
+script with `FLINT_VERSION`:
+
+```sh
+FLINT_VERSION=v0.2.0 curl -fsSL https://flint.devlayer.app/install.sh | sh
+```
 
 ## Exit Behavior
 
