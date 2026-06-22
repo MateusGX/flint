@@ -17,6 +17,7 @@ async fn main() {
         Some("new") => cmd_new(&args[2..]),
         Some("serve") | Some("run") => cmd_serve(&args[2..]).await,
         Some("build") => cmd_build(&args[2..]),
+        Some("update") | Some("upgrade") => cmd_update(),
         Some("version") | Some("--version") | Some("-V") => {
             println!("flint {}", env!("CARGO_PKG_VERSION"));
         }
@@ -44,6 +45,7 @@ fn print_help() {
   flint serve [dir|file.flintbc]     start the development server
   flint build [dir]                  compile portable bytecode into dist/
   flint build --static [dir]         export app/*.flint.ui to static HTML
+  flint update                       update the CLI to the latest release
   flint version                      print the version
 
 {bold}Templates:{reset}
@@ -264,6 +266,89 @@ fn cmd_build(args: &[String]) {
         out::error(e);
         process::exit(1);
     });
+}
+
+// ---------------------------------------------------------------------------
+// update
+// ---------------------------------------------------------------------------
+
+fn cmd_update() {
+    let current = env!("CARGO_PKG_VERSION");
+
+    let output = std::process::Command::new("curl")
+        .args([
+            "--fail",
+            "--silent",
+            "--location",
+            "--header",
+            "Accept: application/vnd.github+json",
+            "--header",
+            "X-GitHub-Api-Version: 2022-11-28",
+            "https://api.github.com/repos/MateusGX/flint/releases/latest",
+        ])
+        .output()
+        .unwrap_or_else(|_| {
+            out::error("curl is required for flint update");
+            process::exit(1);
+        });
+
+    if !output.status.success() {
+        out::error("could not reach GitHub releases — check your connection");
+        process::exit(1);
+    }
+
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
+        out::error("unexpected response from GitHub API");
+        process::exit(1);
+    });
+
+    let latest = json["tag_name"]
+        .as_str()
+        .unwrap_or("")
+        .trim_start_matches('v');
+
+    if latest.is_empty() {
+        out::error("could not determine latest version");
+        process::exit(1);
+    }
+
+    println!(
+        "  {DIM}current{RESET}  {current}",
+        DIM = out::DIM,
+        RESET = out::RESET
+    );
+    println!(
+        "  {DIM}latest{RESET}   {latest}",
+        DIM = out::DIM,
+        RESET = out::RESET
+    );
+    println!();
+
+    if current == latest {
+        println!("  Already up to date.");
+        return;
+    }
+
+    println!(
+        "  Updating to {bold}{latest}{reset}...",
+        bold = out::BOLD,
+        reset = out::RESET
+    );
+    println!();
+
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg("curl -fsSL https://flint.devlayer.app/install.sh | sh")
+        .status()
+        .unwrap_or_else(|_| {
+            out::error("failed to launch the update script");
+            process::exit(1);
+        });
+
+    if !status.success() {
+        out::error("update failed");
+        process::exit(1);
+    }
 }
 
 // ---------------------------------------------------------------------------
