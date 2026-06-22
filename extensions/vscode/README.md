@@ -15,8 +15,8 @@ Language support for Flint route modules and Flint UI pages.
   and documentation.
 - Autocomplete for `use`/`@use` paths, section names, HTTP methods, local
   labels, and Flint UI render commands.
-- File icons for `.fl`, `.flint.ui`, `.flintbc`, and `flint.toml` through the
-  bundled `Flint Icons` file icon theme.
+- Default file icons for `.fl`, `.flint.ui`, and `.flintbc` without changing
+  the user's active file icon theme.
 
 ## File Types
 

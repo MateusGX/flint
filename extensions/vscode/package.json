@@ -2,7 +2,7 @@
   "name": "flint-vscode",
   "displayName": "Flint Language",
   "description": "Language support for Flint route modules and UI pages.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",
@@ -51,6 +51,10 @@
         "extensions": [
           ".fl"
         ],
+        "icon": {
+          "light": "./icons/flint.svg",
+          "dark": "./icons/flint.svg"
+        },
         "configuration": "./language-configuration.json"
       },
       {
@@ -62,7 +66,25 @@
         "extensions": [
           ".flint.ui"
         ],
+        "icon": {
+          "light": "./icons/flint-ui.svg",
+          "dark": "./icons/flint-ui.svg"
+        },
         "configuration": "./ui-language-configuration.json"
+      },
+      {
+        "id": "flint-bytecode",
+        "aliases": [
+          "Flint Bytecode",
+          "flint-bytecode"
+        ],
+        "extensions": [
+          ".flintbc"
+        ],
+        "icon": {
+          "light": "./icons/flint-bytecode.svg",
+          "dark": "./icons/flint-bytecode.svg"
+        }
       }
     ],
     "grammars": [

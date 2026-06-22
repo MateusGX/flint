@@ -4,6 +4,11 @@ All notable changes to the "flint-vscode" extension will be documented in this f
 
 ## [Unreleased]
 
+## [0.2.2]
+
+- Added default language icons for Flint source, Flint UI, and bytecode files
+  without requiring users to switch file icon themes.
+
 ## [0.2.0]
 
 - Removed the obsolete page-template language contribution, snippets, and
