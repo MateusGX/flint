@@ -17,7 +17,7 @@
 //!
 //! ```no_run
 //! # async fn run() -> std::io::Result<()> {
-//! let modules = flint::lang::load_app_dir("routes", ".").unwrap();
+//! let modules = flint::lang::load_app_dir("api", ".").unwrap();
 //! flint::http::serve(modules, "127.0.0.1:3000".parse().unwrap()).await
 //! # }
 //! ```
@@ -29,5 +29,6 @@ mod response;
 mod router;
 
 pub use crate::lang::AppModule;
+pub use dispatch::render_static_html;
 pub use exchange::HttpExchange;
-pub use router::{router, serve, serve_with_ready, try_router, RouterError};
+pub use router::{router, serve, serve_with_ready, RouterError};
