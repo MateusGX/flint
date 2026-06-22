@@ -2,7 +2,7 @@
   "name": "flint-vscode",
   "displayName": "Flint Language",
   "description": "Language support for Flint route modules and UI pages.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "icon": "images/icon.png",
   "publisher": "mateusam",
   "license": "MIT",
@@ -31,8 +31,7 @@
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Programming Languages",
-    "Themes"
+    "Programming Languages"
   ],
   "keywords": [
     "flint",
@@ -86,13 +85,6 @@
       {
         "language": "flint-ui",
         "path": "./snippets/flint-ui.code-snippets"
-      }
-    ],
-    "iconThemes": [
-      {
-        "id": "flint-icons",
-        "label": "Flint Icons",
-        "path": "./icons/flint-icon-theme.json"
       }
     ],
     "configurationDefaults": {
