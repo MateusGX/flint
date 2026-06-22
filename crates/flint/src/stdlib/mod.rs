@@ -35,6 +35,7 @@ mod math;
 mod string;
 mod time;
 mod ui;
+pub use ui::{UI_CSS, UI_JS};
 
 use crate::vm::{NativeFn, NativeRegistry, Value};
 
@@ -53,7 +54,7 @@ pub fn register_all(registry: &mut NativeRegistry) {
 /// Boxes a closure as a [`NativeFn`]. A small convenience so each module's
 /// `register` reads as a flat list of `registry.register_exact(name, arity,
 /// native(...))` calls without repeating the trait-object boilerplate.
-fn native(
+pub(crate) fn native(
     f: impl Fn(&[Value]) -> Result<Option<Value>, String> + Send + Sync + 'static,
 ) -> NativeFn {
     Box::new(f)
@@ -61,7 +62,7 @@ fn native(
 
 /// Fetches argument `idx`, producing a consistent "wrong arity" error if the
 /// caller didn't pass enough arguments.
-fn arg<'a>(args: &'a [Value], idx: usize, native: &str) -> Result<&'a Value, String> {
+pub(crate) fn arg<'a>(args: &'a [Value], idx: usize, native: &str) -> Result<&'a Value, String> {
     args.get(idx).ok_or_else(|| {
         format!(
             "'{native}' expects at least {} argument(s), got {}",
@@ -71,7 +72,11 @@ fn arg<'a>(args: &'a [Value], idx: usize, native: &str) -> Result<&'a Value, Str
     })
 }
 
-fn expect_str<'a>(value: &'a Value, native: &str, position: usize) -> Result<&'a str, String> {
+pub(crate) fn expect_str<'a>(
+    value: &'a Value,
+    native: &str,
+    position: usize,
+) -> Result<&'a str, String> {
     value.as_str().ok_or_else(|| {
         format!(
             "'{native}' expects a string as argument {}, found '{}'",
@@ -81,7 +86,7 @@ fn expect_str<'a>(value: &'a Value, native: &str, position: usize) -> Result<&'a
     })
 }
 
-fn expect_int(value: &Value, native: &str, position: usize) -> Result<i64, String> {
+pub(crate) fn expect_int(value: &Value, native: &str, position: usize) -> Result<i64, String> {
     value.as_int().ok_or_else(|| {
         format!(
             "'{native}' expects an integer as argument {}, found '{}'",
@@ -91,7 +96,7 @@ fn expect_int(value: &Value, native: &str, position: usize) -> Result<i64, Strin
     })
 }
 
-fn expect_json<'a>(
+pub(crate) fn expect_json<'a>(
     value: &'a Value,
     native: &str,
     position: usize,

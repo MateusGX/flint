@@ -15,7 +15,7 @@ pub(super) fn make() -> NativeFn {
         let title = expect_str(arg(args, 1, "ui.card")?, "ui.card", 1)?;
         let title = escape_html(title);
         Ok(Some(Value::Str(Arc::from(format!(
-            "{html}<section class=\"flint-card\"><h2>{title}</h2><div class=\"flint-section\">\n"
+            "{html}<section class=\"flint-card\"><div class=\"flint-card-title\">{title}</div><div class=\"flint-card-body\"><div class=\"flint-section\">\n"
         )))))
     })
 }
