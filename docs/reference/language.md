@@ -307,7 +307,7 @@ they're mangled per enclosing global label and can't collide across handlers.
 
 ## Modules
 
-`flint serve` compiles each `.fl` file directly inside the configured `api`
+`flint serve` compiles each `.fl` file directly inside the configured `routes`
 directory as a separate module. It does not recursively load nested `.fl`
 files.
 
@@ -354,9 +354,9 @@ If `section .route` is empty, the page route is inferred from the file path:
 
 | File | Route |
 |---|---|
-| `app/index.flint.ui` | `GET /` |
-| `app/blog/index.flint.ui` | `GET /blog` |
-| `app/users/[id].flint.ui` | `GET /users/:id` |
+| `pages/index.flint.ui` | `GET /` |
+| `pages/blog/index.flint.ui` | `GET /blog` |
+| `pages/users/[id].flint.ui` | `GET /users/:id` |
 
 Generated page handlers reserve `r14` for the HTML accumulator and use `r15`,
 `r13`, `r12`, `r11`, and `r10` as scratch registers while rendering. See

@@ -5,20 +5,20 @@ use crate::util::{escape, toml_string};
 pub fn minimal(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
-        (PathBuf::from("api/hello.fl"), hello(name)),
-        (PathBuf::from("app/index.flint.ui"), home_page(name)),
+        (PathBuf::from("routes/hello.fl"), hello(name)),
+        (PathBuf::from("pages/index.flint.ui"), home_page(name)),
     ]
 }
 
 pub fn tasks(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
-        (PathBuf::from("api/tasks.fl"), tasks_controller()),
+        (PathBuf::from("routes/tasks.fl"), tasks_controller()),
         (PathBuf::from("services/tasks.fl"), tasks_service()),
         (PathBuf::from("repositories/tasks.fl"), tasks_repository()),
-        (PathBuf::from("api/hello.fl"), hello(name)),
+        (PathBuf::from("routes/hello.fl"), hello(name)),
         (PathBuf::from("components/navbar.fl"), tasks_navbar(name)),
-        (PathBuf::from("app/index.flint.ui"), home_page(name)),
+        (PathBuf::from("pages/index.flint.ui"), home_page(name)),
     ]
 }
 
@@ -26,8 +26,8 @@ pub fn site(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
         (PathBuf::from("components/navbar.fl"), site_navbar()),
-        (PathBuf::from("app/index.flint.ui"), static_home_page(name)),
-        (PathBuf::from("app/about.flint.ui"), static_about_page(name)),
+        (PathBuf::from("pages/index.flint.ui"), static_home_page(name)),
+        (PathBuf::from("pages/about.flint.ui"), static_about_page(name)),
     ]
 }
 
@@ -43,8 +43,8 @@ version = "0.1.0"
 [server]
 host         = "127.0.0.1"
 port         = 3000
-routes       = "api"
-pages        = "app"
+routes       = "routes"
+pages        = "pages"
 services     = "services"
 repositories = "repositories"
 components   = "components"
@@ -79,7 +79,7 @@ section .render
     window "{name}"
         call app_navbar
         card "Next steps"
-            text "This page was rendered from app/index.flint.ui without writing HTML."
+            text "This page was rendered from pages/index.flint.ui without writing HTML."
             btn "Open the API route", "/hello"
             btn "View tasks", "/tasks"
         end

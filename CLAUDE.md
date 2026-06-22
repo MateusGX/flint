@@ -36,12 +36,12 @@ Tests live in `crates/flint/tests/programs.rs` (VM pipeline end-to-end) and `cra
 
 `lang::compile_app_source` runs the full pipeline for route files: `preprocessor::validate_sections` + `preprocessor::normalize_sections` + `preprocessor::expand` (inlines `use "path"` directives) → `lexer::lex` → `parser::parse` → `compiler::compile`. The lower-level `lang::compile_source` skips the preprocessor and is for plain programs without route sections. The output is a `vm::Program` — a flat `Vec<Instr>` plus a string constant pool. `Vm::call(program, address)` executes it from a given instruction address. The HTTP layer (`http::dispatch`) creates a fresh `Vm` + `NativeRegistry` per request, registers both stdlib and per-request `http.*` natives (which close over an `Arc<Mutex<HttpExchange>>`), calls the matched handler address, and converts the resulting `HttpExchange` into an axum response.
 
-## Pages (`app/*.flint.ui`)
+## Pages (`pages/*.flint.ui`)
 
 `Flint` has one server-rendered page layer. Files ending in `.flint.ui` are
 section-based UI pages rendered with Flint's default CSS. They are compiled by
 `lang::pages` into ordinary `.fl` route modules before the normal compiler
-runs. `flint serve` loads `api/*.fl` plus `app/**/*.flint.ui`; `flint build`
+runs. `flint serve` loads `routes/*.fl` plus `pages/**/*.flint.ui`; `flint build`
 compiles the generated route source into `.flintbc` bytecode. `flint build
 --static` executes eligible `GET` UI page handlers with a synthetic request and
 writes upload-ready HTML under `dist/`.
@@ -70,8 +70,8 @@ section .render
 
 - `section .route` contains `METHOD "/path"` without an explicit handler.
   If empty, the compiler infers route paths from file names:
-  `app/index.flint.ui` → `/`, `app/about.flint.ui` → `/about`,
-  `app/users/[id].flint.ui` → `/users/:id`.
+  `pages/index.flint.ui` → `/`, `pages/about.flint.ui` → `/about`,
+  `pages/users/[id].flint.ui` → `/users/:id`.
 - `@use "path.fl"` is accepted only before the first section and includes
   shared `.fl` code in the generated route module.
 - `section .text` contains raw Flint instructions that run before rendering.
@@ -313,15 +313,15 @@ version = "0.1.0"
 [server]
 host         = "127.0.0.1"
 port         = 3000
-routes       = "api"          # the server loads *.fl from this directory
-pages        = "app"          # the server loads **/*.flint.ui from this directory
+routes       = "routes"       # the server loads *.fl from this directory
+pages        = "pages"        # the server loads **/*.flint.ui from this directory
 services     = "services"     # included via `use` by route files
 repositories = "repositories" # included via `use` by service files
 components   = "components"   # included via `@use` by .flint.ui pages
 log          = "info"         # off | error | warn | info | debug
 ```
 
-`flint serve` reads `flint.toml`, then calls `lang::load_app_dir(routes_dir, project_root)` for `.fl` files when the route directory exists and `lang::load_pages_dir(pages_dir, project_root)` for page files, registering all declared/generated routes. `flint serve file.flintbc` / `flint run file.flintbc` skips source loading and serves the compiled bytecode artifact.
+`flint serve` reads `flint.toml`, loads route modules via `lang::load_app_dir(routes_dir, project_root)` and page files via `lang::load_pages_dir(pages_dir, project_root)`, then enters a hot-reload loop: a watcher task polls mtimes under `routes/`, `pages/`, `services/`, `repositories/`, `components/`, and `flint.toml`; when a change is detected it triggers a graceful shutdown and the server rebuilds and rebinds. `flint run file.flintbc` skips source loading entirely and serves the compiled bytecode artifact without hot reload.
 
 ## CLI binary layout
 
@@ -329,7 +329,7 @@ The CLI binary lives in `crates/flint-cli/src/`. Key modules:
 
 - `build.rs` — implements `flint build` (bytecode compilation); normal Rust module, not a Cargo build script
 - `site.rs` — implements `flint build --static` (static HTML export); also a normal Rust module
-- `bytecode.rs` — reads `.flintbc` files for `flint serve <file.flintbc>` / `flint run <file.flintbc>`
+- `bytecode.rs` — reads `.flintbc` files for `flint run <file.flintbc>`
 - `config.rs` — parses `flint.toml`
 - `templates.rs` — scaffold file trees for `flint new --template <name>` (`minimal`, `tasks`, `static`)
 - `out.rs` — terminal output helpers (step/error/done formatting, ANSI codes)

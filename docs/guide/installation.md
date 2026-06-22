@@ -115,9 +115,9 @@ The minimal template creates:
 ```txt
 my-app/
 ├── flint.toml
-├── app/
+├── pages/
 │   └── index.flint.ui
-└── api/
+└── routes/
     └── hello.fl
 ```
 

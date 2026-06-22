@@ -69,10 +69,10 @@ fn default_port() -> u16 {
     3000
 }
 fn default_routes() -> String {
-    "api".into()
+    "routes".into()
 }
 fn default_pages() -> String {
-    "app".into()
+    "pages".into()
 }
 fn default_services() -> String {
     "services".into()

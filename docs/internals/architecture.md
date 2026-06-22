@@ -40,7 +40,7 @@ The public convenience entry points are:
 Server-rendered UI pages go through an extra source-generation step:
 
 ```txt
-app/**/*.flint.ui
+pages/**/*.flint.ui
   -> lang::pages::compile_page_source
   -> generated .fl source
   -> preprocessor

@@ -129,6 +129,26 @@ pub async fn serve_with_ready(
     axum::serve(listener, app).await
 }
 
+/// Like [`serve`] but accepts a `shutdown` future that, when resolved, triggers
+/// a graceful shutdown. Used by `flint serve` for hot-reload: when a source
+/// file changes the watcher resolves the future, axum drains in-flight
+/// requests, and the CLI rebuilds and re-serves on the same port.
+pub async fn serve_with_shutdown<F>(
+    modules: Vec<AppModule>,
+    addr: SocketAddr,
+    shutdown: F,
+) -> std::io::Result<()>
+where
+    F: std::future::Future<Output = ()> + Send + 'static,
+{
+    let app =
+        router(modules).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown)
+        .await
+}
+
 fn validate_runtime_route_path(path: &str) -> Result<(), RouterError> {
     if !path.starts_with('/') {
         return Err(RouterError {

@@ -1,6 +1,6 @@
 //! Page templates for Flint apps.
 //!
-//! Pages live under `app/` as `.flint.ui` files. Each file must use the
+//! Pages live under `pages/` as `.flint.ui` files. Each file must use the
 //! section-based format:
 //!
 //! ```text
@@ -146,7 +146,7 @@ mod tests {
             "GET \"/hello\"",
             "    window \"Hello\"\n        text \"World\"\n    end\n",
         );
-        let page = compile_page_source(&source, "app/hello.flint.ui", "app").unwrap();
+        let page = compile_page_source(&source, "pages/hello.flint.ui", "pages").unwrap();
         assert_eq!(page.method, "GET");
         assert_eq!(page.route_path, "/hello");
         assert!(page.source.contains("section .route"), "{}", page.source);
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn rejects_legacy_page_format() {
         let source = "@page \"/hello\"\n<h1>Hello</h1>\n";
-        let err = compile_page_source(source, "app/hello.flint.ui", "app").unwrap_err();
+        let err = compile_page_source(source, "pages/hello.flint.ui", "pages").unwrap_err();
         assert!(err.message.contains("section"), "{}", err.message);
     }
 
@@ -180,23 +180,23 @@ mod tests {
     fn infers_routes_from_page_paths() {
         let empty = "section .route\n\nsection .render\n";
 
-        let page = compile_page_source(empty, "app/users/[id].flint.ui", "app").unwrap();
+        let page = compile_page_source(empty, "pages/users/[id].flint.ui", "pages").unwrap();
         assert_eq!(page.route_path, "/users/:id");
 
-        let page = compile_page_source(empty, "app/blog/index.flint.ui", "app").unwrap();
+        let page = compile_page_source(empty, "pages/blog/index.flint.ui", "pages").unwrap();
         assert_eq!(page.route_path, "/blog");
 
-        let page = compile_page_source(empty, "app/index.flint.ui", "app").unwrap();
+        let page = compile_page_source(empty, "pages/index.flint.ui", "pages").unwrap();
         assert_eq!(page.route_path, "/");
 
-        let page = compile_page_source(empty, "app/admin/index.flint.ui", "app").unwrap();
+        let page = compile_page_source(empty, "pages/admin/index.flint.ui", "pages").unwrap();
         assert_eq!(page.route_path, "/admin");
     }
 
     #[test]
     fn data_section_inlines_string_values() {
         let source = "section .route\n    GET \"/\"\n\nsection .data\n    greeting  db \"Hello, World!\"\n\nsection .render\n    text greeting\n";
-        let page = compile_page_source(source, "app/index.flint.ui", "app").unwrap();
+        let page = compile_page_source(source, "pages/index.flint.ui", "pages").unwrap();
         assert!(
             page.source.contains("mov r15, \"Hello, World!\""),
             "{}",
@@ -213,7 +213,7 @@ mod tests {
     fn use_directives_are_emitted_before_handler() {
         let source =
             "@use \"services/site.fl\"\n\nsection .route\n    GET \"/\"\n\nsection .render\n";
-        let page = compile_page_source(source, "app/index.flint.ui", "app").unwrap();
+        let page = compile_page_source(source, "pages/index.flint.ui", "pages").unwrap();
         assert!(
             page.source.contains("use \"services/site.fl\""),
             "{}",

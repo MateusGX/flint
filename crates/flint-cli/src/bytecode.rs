@@ -573,7 +573,7 @@ mod tests {
         AppModule {
             program: Arc::new(app.program),
             routes: app.routes,
-            source_path: PathBuf::from("api/test.fl"),
+            source_path: PathBuf::from("routes/test.fl"),
         }
     }
 

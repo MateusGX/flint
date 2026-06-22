@@ -16,14 +16,17 @@ cd my-api
 flint serve
 ```
 
-Open the `api/` directory in another terminal or editor.
+The server starts with hot reload enabled — it watches for changes to `.fl`
+and `.flint.ui` files and automatically recompiles on save.
+
+Open the `routes/` directory in another terminal or editor.
 
 ## How Route Files Work
 
-The server loads every `.fl` file directly inside `api/`:
+The server loads every `.fl` file directly inside `routes/`:
 
 ```txt
-api/
+routes/
 ├── hello.fl
 ├── users.fl
 └── echo.fl
@@ -39,7 +42,7 @@ section .route
 
 ## Route 1: Plain Text
 
-Create or replace `api/hello.fl`:
+Create or replace `routes/hello.fl`:
 
 ```txt
 section .route
@@ -74,7 +77,7 @@ The request flow:
 
 ## Route 2: Path Params and JSON
 
-Create `api/users.fl`:
+Create `routes/users.fl`:
 
 ```txt
 section .route
@@ -141,7 +144,7 @@ ncallr r0, json.set, r0, r1, r2
 
 ## Route 3: Read a POST Body
 
-Create `api/echo.fl`:
+Create `routes/echo.fl`:
 
 ```txt
 section .route

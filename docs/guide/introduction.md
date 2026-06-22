@@ -39,7 +39,7 @@ Read it from top to bottom:
 
 ## A Complete UI Page
 
-UI pages live under `app/` and end with `.flint.ui`. They use sections too:
+UI pages live under `pages/` and end with `.flint.ui`. They use sections too:
 
 ```txt
 section .route

@@ -15,7 +15,8 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
         Some("new") => cmd_new(&args[2..]),
-        Some("serve") | Some("run") => cmd_serve(&args[2..]).await,
+        Some("serve") => cmd_serve(&args[2..]).await,
+        Some("run") => cmd_run(&args[2..]).await,
         Some("build") => cmd_build(&args[2..]),
         Some("update") | Some("upgrade") => cmd_update(),
         Some("version") | Some("--version") | Some("-V") => {
@@ -42,9 +43,10 @@ fn print_help() {
 {bold}Usage:{reset}
   flint new <name>                   scaffold a new project
   flint new <name> --template tasks  scaffold with the tasks API example
-  flint serve [dir|file.flintbc]     start the development server
+  flint serve [dir]                  start the development server with hot reload
+  flint run <file.flintbc>           serve a compiled bytecode file
   flint build [dir]                  compile portable bytecode into dist/
-  flint build --static [dir]         export app/*.flint.ui to static HTML
+  flint build --static [dir]         export pages/*.flint.ui to static HTML
   flint update                       update the CLI to the latest release
   flint version                      print the version
 
@@ -52,18 +54,7 @@ fn print_help() {
   minimal   a single GET /hello route  (default)
   tasks     GET /tasks, GET /tasks/:id, POST /tasks, showing controllers,
             services and repositories
-  static    UI-only project for static HTML export
-
-{bold}Project file (flint.toml):{reset}
-  [project]
-  name    = \"my-app\"
-  version = \"0.1.0\"
-
-  [server]
-  host   = \"127.0.0.1\"
-  port   = 3000
-  routes = \"api\"
-  pages  = \"app\"",
+  static    UI-only project for static HTML export",
         bold = out::BOLD,
         reset = out::RESET,
         ver = env!("CARGO_PKG_VERSION"),
@@ -137,39 +128,19 @@ fn cmd_new(args: &[String]) {
 }
 
 // ---------------------------------------------------------------------------
-// serve
+// serve (source + hot reload)
 // ---------------------------------------------------------------------------
 
 async fn cmd_serve(args: &[String]) {
     let dir = resolve_project_dir(args);
     if bytecode::is_bytecode_path(&dir) {
-        serve_bytecode(&dir).await;
-        return;
+        out::error("'flint serve' only works with source projects; use 'flint run <file.flintbc>' for bytecode");
+        process::exit(1);
     }
 
     let config = load_config(&dir);
     let routes_dir = dir.join(&config.server.routes);
     let pages_dir = dir.join(&config.server.pages);
-
-    let mut modules = if routes_dir.exists() {
-        flint::lang::load_app_dir(&routes_dir, &dir).unwrap_or_else(|e| {
-            out::error(format!(
-                "failed to load routes from '{}': {e}",
-                routes_dir.display()
-            ));
-            process::exit(1);
-        })
-    } else {
-        Vec::new()
-    };
-    let mut page_modules = flint::lang::load_pages_dir(&pages_dir, &dir).unwrap_or_else(|e| {
-        out::error(format!(
-            "failed to load pages from '{}': {e}",
-            pages_dir.display()
-        ));
-        process::exit(1);
-    });
-    modules.append(&mut page_modules);
 
     let addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port)
         .parse()
@@ -188,20 +159,146 @@ async fn cmd_serve(args: &[String]) {
             .parse()
             .unwrap_or(flint::log::LogLevel::Info),
     );
-    if let Err(e) = flint::http::serve_with_ready(modules, addr, |addr| {
-        println!(
-            "  {bold}{}{reset} v{}  →  {bold}http://{addr}{reset}",
-            config.project.name,
-            config.project.version,
-            bold = out::BOLD,
-            reset = out::RESET,
-        );
-    })
-    .await
-    {
-        out::error(format!("server: {e}"));
+
+    // Directories and files that trigger a reload when modified.
+    let watch_paths = vec![
+        dir.join(&config.server.routes),
+        dir.join(&config.server.pages),
+        dir.join(&config.server.services),
+        dir.join(&config.server.repositories),
+        dir.join(&config.server.components),
+        dir.join("flint.toml"),
+    ];
+
+    println!(
+        "  {bold}{}{reset} v{}  →  {bold}http://{addr}{reset}",
+        config.project.name,
+        config.project.version,
+        bold = out::BOLD,
+        reset = out::RESET,
+    );
+
+    loop {
+        let modules = match load_source_modules(&routes_dir, &pages_dir, &dir) {
+            Ok(m) => m,
+            Err(e) => {
+                out::error(e);
+                wait_for_change(&watch_paths).await;
+                out::step("watch", "change detected, reloading");
+                continue;
+            }
+        };
+
+        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+        let watch_clone = watch_paths.clone();
+        let watcher = tokio::spawn(async move {
+            wait_for_change(&watch_clone).await;
+            let _ = shutdown_tx.send(());
+        });
+
+        let result = flint::http::serve_with_shutdown(modules, addr, async move {
+            shutdown_rx.await.ok();
+        })
+        .await;
+
+        watcher.abort();
+
+        match result {
+            Ok(()) => {
+                out::step("watch", "change detected, reloading");
+                // Brief pause so the OS releases the port before we rebind.
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+                // Port still held; retry after a short delay.
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::InvalidInput => {
+                // Router build failure (duplicate routes, etc.).
+                out::error(format!("{e}"));
+                wait_for_change(&watch_paths).await;
+                out::step("watch", "change detected, reloading");
+            }
+            Err(e) => {
+                out::error(format!("server: {e}"));
+                process::exit(1);
+            }
+        }
+    }
+}
+
+fn load_source_modules(
+    routes_dir: &Path,
+    pages_dir: &Path,
+    project_root: &Path,
+) -> Result<Vec<flint::lang::AppModule>, String> {
+    let mut modules = if routes_dir.exists() {
+        flint::lang::load_app_dir(routes_dir, project_root).map_err(|e| e.to_string())?
+    } else {
+        Vec::new()
+    };
+    let mut pages =
+        flint::lang::load_pages_dir(pages_dir, project_root).map_err(|e| e.to_string())?;
+    modules.append(&mut pages);
+    Ok(modules)
+}
+
+/// Polls the mtime of every `.fl` and `.flint.ui` file (and `flint.toml`)
+/// under the given paths, returning when any of them changes.
+async fn wait_for_change(watch_paths: &[std::path::PathBuf]) {
+    let initial = source_mtime(watch_paths);
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+        if source_mtime(watch_paths) != initial {
+            return;
+        }
+    }
+}
+
+fn source_mtime(paths: &[std::path::PathBuf]) -> u64 {
+    let mut max = 0u64;
+    let mut stack: Vec<std::path::PathBuf> = paths.to_vec();
+    while let Some(p) = stack.pop() {
+        if p.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(&p) {
+                for entry in entries.flatten() {
+                    stack.push(entry.path());
+                }
+            }
+        } else if is_watched_file(&p) {
+            if let Ok(meta) = p.metadata() {
+                if let Ok(mtime) = meta.modified() {
+                    let ms = mtime
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64;
+                    max = max.max(ms);
+                }
+            }
+        }
+    }
+    max
+}
+
+fn is_watched_file(path: &std::path::Path) -> bool {
+    if path.file_name().and_then(|n| n.to_str()) == Some("flint.toml") {
+        return true;
+    }
+    let s = path.to_str().unwrap_or("");
+    s.ends_with(".fl") || s.ends_with(".flint.ui")
+}
+
+// ---------------------------------------------------------------------------
+// run (bytecode only, no hot reload)
+// ---------------------------------------------------------------------------
+
+async fn cmd_run(args: &[String]) {
+    let path = resolve_project_dir(args);
+    if !bytecode::is_bytecode_path(&path) {
+        out::error("'flint run' only accepts .flintbc files; use 'flint serve' to run a source project");
         process::exit(1);
     }
+    serve_bytecode(&path).await;
 }
 
 async fn serve_bytecode(path: &Path) {

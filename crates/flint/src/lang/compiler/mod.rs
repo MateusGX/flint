@@ -42,7 +42,7 @@ impl fmt::Display for CompileError {
 
 impl std::error::Error for CompileError {}
 
-/// The result of compiling a Flint "app" source file: bytecode plus the
+/// The result of compiling a Flint route source file: bytecode plus the
 /// routes it declares. One of these is produced per `.fl` file by
 /// [`crate::lang::load_app_dir`].
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 # UI Pages
 
-UI pages live under `app/`, end with `.flint.ui`, and compile into normal
+UI pages live under `pages/`, end with `.flint.ui`, and compile into normal
 Flint route modules. They use section blocks:
 
 ```txt
@@ -16,7 +16,7 @@ section .render
 UI pages use sections only.
 
 ```txt
-app/
+pages/
 ├── index.flint.ui
 └── users/
     └── [id].flint.ui
@@ -24,7 +24,7 @@ app/
 
 ## Your First UI Page
 
-Create `app/index.flint.ui`:
+Create `pages/index.flint.ui`:
 
 ```txt
 section .route
@@ -81,9 +81,9 @@ path and the method defaults to `GET`:
 
 | File | Inferred route |
 |---|---|
-| `app/index.flint.ui` | `GET /` |
-| `app/tasks/index.flint.ui` | `GET /tasks` |
-| `app/tasks/[id].flint.ui` | `GET /tasks/:id` |
+| `pages/index.flint.ui` | `GET /` |
+| `pages/tasks/index.flint.ui` | `GET /tasks` |
+| `pages/tasks/[id].flint.ui` | `GET /tasks/:id` |
 
 ## Includes
 
@@ -130,7 +130,7 @@ Common commands:
 | `input "Label", "name"` | Text input. |
 | `submit "Save"` | Submit button. |
 
-The showcase under `examples/ui-showcase/app/` demonstrates the larger set:
+The showcase under `examples/ui-showcase/pages/` demonstrates the larger set:
 navbar, breadcrumb, tables, tabs, dialogs, accordions, trees, forms, status
 badges, meters, progress bars, and layout primitives.
 

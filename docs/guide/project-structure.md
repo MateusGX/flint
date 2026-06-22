@@ -8,9 +8,9 @@ read when you separate UI pages, HTTP controllers, services, and data access.
 ```txt
 my-app/
 ├── flint.toml
-├── app/
+├── pages/
 │   └── index.flint.ui
-├── api/
+├── routes/
 │   ├── hello.fl
 │   └── tasks.fl
 ├── components/
@@ -25,8 +25,8 @@ my-app/
 
 | Directory | Loaded automatically | Purpose |
 |---|---|---|
-| `app/` | Yes, recursively for `*.flint.ui` | Server-rendered UI pages. |
-| `api/` | Yes, direct `*.fl` children only when present | HTTP route handlers and controllers. |
+| `pages/` | Yes, recursively for `*.flint.ui` | Server-rendered UI pages. |
+| `routes/` | Yes, direct `*.fl` children only when present | HTTP route handlers and controllers. |
 | `components/` | No | Reusable UI fragments included with `@use` in `.flint.ui` pages. |
 | `services/` | No | Business rules included with `use`. |
 | `repositories/` | No | Data access included with `use`. |
@@ -44,8 +44,8 @@ page -> component (UI fragment)
 page -> service -> repository
 ```
 
-UI-only projects can omit `api/` entirely and use `flint build --static` to
-export upload-ready HTML from `app/**/*.flint.ui`.
+UI-only projects can omit `routes/` entirely and use `flint build --static` to
+export upload-ready HTML from `pages/**/*.flint.ui`.
 
 ## Manifest
 
@@ -59,8 +59,8 @@ version = "0.1.0"
 [server]
 host         = "127.0.0.1"
 port         = 3000
-routes       = "api"
-pages        = "app"
+routes       = "routes"
+pages        = "pages"
 services     = "services"
 repositories = "repositories"
 components   = "components"
@@ -72,12 +72,12 @@ tooling and humans; include files from them with `use` or `@use`.
 
 ## Route Modules
 
-Every `.fl` file directly inside `api/` is compiled as an independent
+Every `.fl` file directly inside `routes/` is compiled as an independent
 module:
 
 ```txt
-api/tasks.fl
-api/hello.fl
+routes/tasks.fl
+routes/hello.fl
 ```
 
 Each module gets its own bytecode program, label namespace, function table, and
@@ -93,7 +93,7 @@ Use `use` to inline shared code before compilation:
 use "services/tasks.fl"
 ```
 
-`api/tasks.fl`:
+`routes/tasks.fl`:
 
 ```txt
 use "services/tasks.fl"
@@ -134,13 +134,13 @@ Includes are resolved from the project root, not from the current file. Included
 
 ## UI Pages
 
-Pages are loaded recursively from `app/`:
+Pages are loaded recursively from `pages/`:
 
 ```txt
-app/index.flint.ui       -> /
-app/tasks/index.flint.ui -> /tasks
-app/tasks/[id].flint.ui  -> /tasks/:id
-app/admin/index.flint.ui -> /admin
+pages/index.flint.ui       -> /
+pages/tasks/index.flint.ui -> /tasks
+pages/tasks/[id].flint.ui  -> /tasks/:id
+pages/admin/index.flint.ui -> /admin
 ```
 
 Pages can include services:

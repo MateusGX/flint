@@ -12,12 +12,10 @@ HTML sites.
 | `flint new <name> --template minimal` | Same as the default template. |
 | `flint new <name> --template tasks` | Create a Tasks API example. |
 | `flint new <name> --template static` | Create a UI-only static site project. |
-| `flint serve [dir]` | Start the development server for a project. |
-| `flint serve <file.flintbc>` | Serve a compiled bytecode artifact. |
-| `flint run [dir]` | Alias for `flint serve [dir]`. |
-| `flint run <file.flintbc>` | Alias for serving a bytecode artifact. |
+| `flint serve [dir]` | Start the development server with hot reload (source projects only). |
+| `flint run <file.flintbc>` | Serve a compiled bytecode artifact (no hot reload). |
 | `flint build [dir]` | Compile portable bytecode into `dist/`. |
-| `flint build --static [dir]` | Export `app/**/*.flint.ui` to static HTML in `dist/`. |
+| `flint build --static [dir]` | Export `pages/**/*.flint.ui` to static HTML in `dist/`. |
 | `flint update` | Update the CLI to the latest release. |
 | `flint upgrade` | Alias for `flint update`. |
 | `flint version` | Print the CLI version. |
@@ -38,8 +36,8 @@ version = "0.1.0"
 [server]
 host         = "127.0.0.1"
 port         = 3000
-routes       = "api"
-pages        = "app"
+routes       = "routes"
+pages        = "pages"
 services     = "services"
 repositories = "repositories"
 components   = "components"
@@ -55,8 +53,8 @@ If optional fields are missing, the CLI uses:
 | `project.version` | `"0.1.0"` |
 | `server.host` | `"127.0.0.1"` |
 | `server.port` | `3000` |
-| `server.routes` | `"api"` |
-| `server.pages` | `"app"` |
+| `server.routes` | `"routes"` |
+| `server.pages` | `"pages"` |
 | `server.services` | `"services"` |
 | `server.repositories` | `"repositories"` |
 | `server.components` | `"components"` |
@@ -77,11 +75,11 @@ Creates:
 ```txt
 my-app/
 ├── flint.toml
-├── app/
+├── pages/
 │   └── index.flint.ui
 ├── components/
 │   └── navbar.fl
-└── api/
+└── routes/
     └── hello.fl
 ```
 
@@ -98,9 +96,9 @@ Creates:
 ```txt
 my-app/
 ├── flint.toml
-├── app/
+├── pages/
 │   └── index.flint.ui
-├── api/
+├── routes/
 │   ├── hello.fl
 │   └── tasks.fl
 ├── components/
@@ -134,7 +132,7 @@ my-site/
 ├── flint.toml
 ├── components/
 │   └── navbar.fl
-└── app/
+└── pages/
     ├── index.flint.ui
     └── about.flint.ui
 ```
@@ -153,19 +151,40 @@ This writes upload-ready HTML such as `dist/index.html` and
 ```sh
 flint serve
 flint serve path/to/project
-flint serve dist/my-app.flintbc
 ```
 
-The command:
+`flint serve` is the development server. The command:
 
 1. reads `flint.toml`
 2. loads route modules from `server.routes`
 3. loads UI page files from `server.pages`
 4. binds to `server.host:server.port`
 5. starts the built-in request logger at the configured `server.log` level
+6. watches source files for changes and reloads automatically
 
-When given a `.flintbc` file, `serve` skips source loading and executes the
-compiled bytecode directly.
+**Hot reload** — whenever a `.fl`, `.flint.ui`, or `flint.toml` file changes
+under `routes/`, `pages/`, `services/`, `repositories/`, or `components/`,
+the server recompiles and restarts on the same port. If a compile error occurs,
+the error is printed and the server waits for the next change before retrying.
+
+`flint serve` only accepts source projects. Passing a `.flintbc` file is an
+error; use `flint run` instead.
+
+## Run
+
+```sh
+flint run dist/my-app.flintbc
+FLINT_ADDR=0.0.0.0:8080 flint run dist/my-app.flintbc
+```
+
+`flint run` serves a compiled bytecode artifact with no hot reload and no
+`flint.toml` required. It is intended for production and CI use.
+
+`FLINT_ADDR` sets the listen address. If missing, the runtime listens on
+`0.0.0.0:3000`. `ASMB_ADDR` is accepted as a compatibility fallback.
+
+`flint run` only accepts `.flintbc` files. Passing a source directory is an
+error; use `flint serve` instead.
 
 ## Build
 
@@ -182,18 +201,13 @@ instructions, string pools, initial memory, and resolved route handler
 addresses. Source text and handler names are not stored in the artifact, and
 the payload is lightly obfuscated to avoid casual string/bytecode inspection.
 
-Run the artifact with any compatible Flint CLI:
+Run the artifact with:
 
 ```sh
 flint run dist/my-app.flintbc
-FLINT_ADDR=0.0.0.0:8080 flint run dist/my-app.flintbc
 ```
 
-When running bytecode, `FLINT_ADDR` chooses the listen address. If it is
-missing, Flint listens on `0.0.0.0:3000`.
-`ASMB_ADDR` is still accepted as a compatibility fallback.
-If the address is invalid or cannot be bound, the runtime prints the
-error and exits with status `1`.
+See [Run](#run) for address configuration and environment variables.
 
 ## Static Export
 
@@ -258,9 +272,9 @@ Example output at `debug` level:
        handler  0x2a
 ```
 
-When running a `.flintbc` bytecode artifact (no `flint.toml`), the log level
-is read from the `FLINT_LOG` environment variable. Unrecognised values and
-missing variables fall back to `info`.
+When running a bytecode artifact with `flint run`, there is no `flint.toml`,
+so the log level is read from the `FLINT_LOG` environment variable.
+Unrecognised values and missing variables fall back to `info`.
 
 ```sh
 FLINT_LOG=debug flint run dist/my-app.flintbc

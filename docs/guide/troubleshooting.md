@@ -42,43 +42,43 @@ flint serve path/to/my-app
 
 ## A Route File Is Not Loaded
 
-Only `.fl` files directly inside the configured `api` directory are loaded.
+Only `.fl` files directly inside the configured `routes` directory are loaded.
 
 This is loaded:
 
 ```txt
-api/tasks.fl
+routes/tasks.fl
 ```
 
 This is not loaded automatically:
 
 ```txt
-api/admin/tasks.fl
+routes/admin/tasks.fl
 ```
 
-Move it to `api/` or include it from a loaded route file.
+Move it to `routes/` or include it from a loaded route file.
 
 ## A Page Is Not Loaded
 
-Pages must end with `.flint.ui` and live under the configured `app` directory
+Pages must end with `.flint.ui` and live under the configured `pages` directory
 unless `server.pages` points somewhere else.
 
 This is loaded:
 
 ```txt
-app/index.flint.ui
-app/users/[id].flint.ui
-app/dashboard.flint.ui
+pages/index.flint.ui
+pages/users/[id].flint.ui
+pages/dashboard.flint.ui
 ```
 
 This is not a page:
 
 ```txt
-app/index.html
-app/index.fl
+pages/index.html
+pages/index.fl
 ```
 
-If `app/` does not exist, the server simply loads no pages.
+If `pages/` does not exist, the server simply loads no pages.
 
 ## A Route Handler Is Missing
 
@@ -272,7 +272,7 @@ The shared Flint UI assets are emitted once as `dist/flint.css` and
 
 Check:
 
-- pages live under `app/` or the configured `server.pages`
+- pages live under `pages/` or the configured `server.pages`
 - page routes use `GET`
 - page routes are concrete, not dynamic paths such as `/users/:id`
 - page code does not call any `http.*` native other than `http.html`

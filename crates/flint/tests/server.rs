@@ -23,7 +23,7 @@ fn app_module(source: &str) -> AppModule {
 
 fn page_module(source: &str, path: &str) -> AppModule {
     let page =
-        flint::lang::compile_page_source(source, path, "app").expect("the page should compile");
+        flint::lang::compile_page_source(source, path, "pages").expect("the page should compile");
     let compiled = page
         .compile(std::path::Path::new("."))
         .expect("the page source should compile");
@@ -148,7 +148,7 @@ section .render
         end
     end
 "#,
-        "app/profile.flint.ui",
+        "pages/profile.flint.ui",
     )];
 
     let request = Request::builder()

@@ -168,7 +168,7 @@ and `jge` use the most recent comparison.
 
 ## Modules and Includes
 
-Each route file in `api/` is compiled independently. Files in `services/`
+Each route file in `routes/` is compiled independently. Files in `services/`
 and `repositories/` become part of a route module only when included:
 
 ```txt

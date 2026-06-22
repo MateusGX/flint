@@ -20,7 +20,7 @@ features:
   - title: Assembly-like HTTP
     details: Declare routes in .fl files, move values through registers, call http.* natives, and return text, HTML, or JSON.
   - title: Styled UI pages
-    details: Build server-rendered pages from app/**/*.flint.ui with section .route and section .render.
+    details: Build server-rendered pages from pages/**/*.flint.ui with section .route and section .render.
   - title: Native runtime bridge
     details: Use string.*, json.*, math.*, time.*, env.*, crypto.*, and http.* natives without adding new bytecode instructions.
   - title: Visible VM model
