@@ -23,8 +23,15 @@ fn app_module(source: &str) -> AppModule {
 
 fn page_module(source: &str, path: &str) -> AppModule {
     let page =
-        flint::lang::compile_page_source(source, path, "pages").expect("the page should compile");
-    app_module(&page.source)
+        flint::lang::compile_page_source(source, path, "app").expect("the page should compile");
+    let compiled = page
+        .compile(std::path::Path::new("."))
+        .expect("the page source should compile");
+    AppModule {
+        program: Arc::new(compiled.program),
+        routes: compiled.routes,
+        source_path: PathBuf::from(path),
+    }
 }
 
 async fn send(
@@ -67,13 +74,14 @@ fn header<'a>(headers: &'a [(String, String)], name: &str) -> Option<&'a str> {
 #[tokio::test]
 async fn get_route_returns_text_response() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "Hello from Flint!"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 "#,
     )];
 
@@ -95,13 +103,14 @@ route GET "/hello" -> say_hello
 #[tokio::test]
 async fn get_route_returns_html_response() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/" -> show_home
+
+section .text
 show_home:
     mov r0, "<h1>Hello</h1>"
     ncall http.html, r0
     ret
-
-route GET "/" -> show_home
 "#,
     )];
 
@@ -121,87 +130,25 @@ route GET "/" -> show_home
 }
 
 #[tokio::test]
-async fn page_template_renders_html_with_flint_blocks() {
-    let modules = vec![page_module(
-        r#"@page "/hello"
-<%
-mov r0, "name"
-ncallr r1, http.query, r0
-%>
-<!doctype html>
-<h1>Hello <%= r1 %></h1>
-"#,
-        "pages/index.flint.html",
-    )];
-
-    let request = Request::builder()
-        .method("GET")
-        .uri("/hello?name=Ada")
-        .body(Body::empty())
-        .unwrap();
-    let (status, headers, body) = send(modules, request).await;
-
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(
-        header(&headers, "content-type"),
-        Some("text/html; charset=utf-8")
-    );
-    let body = String::from_utf8(body).unwrap();
-    assert!(body.contains("<h1>Hello Ada</h1>"), "{body}");
-}
-
-#[tokio::test]
-async fn page_output_expressions_are_html_escaped() {
-    let modules = vec![page_module(
-        r#"@page "/hello"
-<%
-mov r0, "name"
-ncallr r1, http.query, r0
-%>
-<h1>Hello <%= r1 %></h1>
-"#,
-        "pages/index.flint.html",
-    )];
-
-    let request = Request::builder()
-        .method("GET")
-        .uri("/hello?name=%3Cscript%3Ealert(1)%3C/script%3E")
-        .body(Body::empty())
-        .unwrap();
-    let (status, _, body) = send(modules, request).await;
-
-    assert_eq!(status, StatusCode::OK);
-    let body = String::from_utf8(body).unwrap();
-    assert!(
-        body.contains("&lt;script&gt;alert(1)&lt;/script&gt;"),
-        "{body}"
-    );
-    assert!(!body.contains("<script>alert(1)</script>"), "{body}");
-}
-
-#[tokio::test]
 async fn ui_page_renders_default_styled_controls() {
     let modules = vec![page_module(
-        r#"@page "/profile"
-<%
-mov r0, "name"
-ncallr r1, http.query, r0
-mov r15, "Profile"
-ncallr r14, ui.window, r14, r15
-mov r15, "Rendered without writing HTML"
-ncallr r14, ui.text, r14, r15
-mov r15, "Details"
-ncallr r14, ui.card, r14, r15
-mov r15, "Name"
-ncallr r14, ui.field, r14, r15, r1
-mov r15, "API"
-mov r2, "/hello"
-ncallr r14, ui.button, r14, r15, r2
-ncallr r14, ui.card_end, r14
-ncallr r14, ui.window_end, r14
-%>
+        r#"section .route
+    GET "/profile"
+
+section .text
+    mov r0, "name"
+    ncallr r1, http.query, r0
+
+section .render
+    window "Profile"
+        text "Rendered without writing HTML"
+        card "Details"
+            field "Name", r1
+            btn   "API",  "/hello"
+        end
+    end
 "#,
-        "pages/profile.flint.ui",
+        "app/profile.flint.ui",
     )];
 
     let request = Request::builder()
@@ -226,7 +173,10 @@ ncallr r14, ui.window_end, r14
 #[tokio::test]
 async fn get_route_resolves_path_parameters_into_json_response() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/users/:id" -> show_user
+
+section .text
 show_user:
     mov r0, "id"
     ncallr r1, http.param, r0
@@ -235,8 +185,6 @@ show_user:
     ncallr r2, json.set, r2, r3, r1
     ncall http.json, r2
     ret
-
-route GET "/users/:id" -> show_user
 "#,
     )];
 
@@ -256,7 +204,10 @@ route GET "/users/:id" -> show_user
 #[tokio::test]
 async fn post_route_reads_json_body_and_sets_status() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    POST "/echo" -> echo_body
+
+section .text
 echo_body:
     ncallr r0, http.json_body
     ncallr r1, json.object
@@ -266,8 +217,6 @@ echo_body:
     ncall http.set_status, r2
     ncall http.json, r1
     ret
-
-route POST "/echo" -> echo_body
 "#,
     )];
 
@@ -288,7 +237,10 @@ route POST "/echo" -> echo_body
 #[tokio::test]
 async fn invalid_response_header_is_a_runtime_error() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/bad-header" -> bad_header
+
+section .text
 bad_header:
     mov r0, "bad header"
     mov r1, "ok"
@@ -296,8 +248,6 @@ bad_header:
     mov r0, "done"
     ncall http.text, r0
     ret
-
-route GET "/bad-header" -> bad_header
 "#,
     )];
 
@@ -319,14 +269,15 @@ route GET "/bad-header" -> bad_header
 #[tokio::test]
 async fn request_headers_preserve_non_utf8_bytes_lossily() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/header" -> echo_header
+
+section .text
 echo_header:
     mov r0, "x-bin"
     ncallr r1, http.header, r0
     ncall http.text, r1
     ret
-
-route GET "/header" -> echo_header
 "#,
     )];
 
@@ -345,13 +296,14 @@ route GET "/header" -> echo_header
 #[tokio::test]
 async fn unknown_route_returns_404() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "hi"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 "#,
     )];
 
@@ -368,12 +320,13 @@ route GET "/hello" -> say_hello
 #[tokio::test]
 async fn handler_runtime_errors_become_500_responses() {
     let modules = vec![app_module(
-        r#"
+        r#"section .route
+    GET "/boom" -> boom
+
+section .text
 boom:
     ncallr r0, http.json_body
     ret
-
-route GET "/boom" -> boom
 "#,
     )];
 
@@ -395,23 +348,25 @@ route GET "/boom" -> boom
 async fn routes_from_multiple_modules_are_all_registered() {
     let modules = vec![
         app_module(
-            r#"
+            r#"section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "hi"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 "#,
         ),
         app_module(
-            r#"
+            r#"section .route
+    GET "/bye" -> say_bye
+
+section .text
 say_bye:
     mov r0, "bye"
     ncall http.text, r0
     ret
-
-route GET "/bye" -> say_bye
 "#,
         ),
     ];
@@ -439,24 +394,26 @@ route GET "/bye" -> say_bye
 fn duplicate_routes_are_rejected_before_axum_route_registration() {
     let modules = vec![
         app_module(
-            r#"
+            r#"section .route
+    GET "/dupe" -> first
+
+section .text
 first:
     ret
-
-route GET "/dupe" -> first
 "#,
         ),
         app_module(
-            r#"
+            r#"section .route
+    GET "/dupe" -> second
+
+section .text
 second:
     ret
-
-route GET "/dupe" -> second
 "#,
         ),
     ];
 
-    let err = flint::http::try_router(modules).unwrap_err();
+    let err = flint::http::router(modules).unwrap_err();
     assert!(
         err.to_string().contains("duplicate route GET /dupe"),
         "{err}"
@@ -467,27 +424,36 @@ route GET "/dupe" -> second
 fn structurally_conflicting_routes_are_rejected_before_axum_route_registration() {
     let modules = vec![
         app_module(
-            r#"
+            r#"section .route
+    GET "/users/:id" -> first
+
+section .text
 first:
     ret
-
-route GET "/users/:id" -> first
 "#,
         ),
         app_module(
-            r#"
+            r#"section .route
+    GET "/users/:name" -> second
+
+section .text
 second:
     ret
-
-route GET "/users/:name" -> second
 "#,
         ),
     ];
 
-    let err = flint::http::try_router(modules).unwrap_err();
+    let err = flint::http::router(modules).unwrap_err();
     assert!(
         err.to_string()
             .contains("conflicting route pattern GET /users/:name"),
         "{err}"
     );
+}
+
+#[test]
+fn bare_route_directive_is_rejected() {
+    let err = flint::lang::compile_app_source("handler:\n    ret\n\nroute GET \"/\" -> handler\n")
+        .unwrap_err();
+    assert!(err.to_string().contains("section .route"), "{err}");
 }

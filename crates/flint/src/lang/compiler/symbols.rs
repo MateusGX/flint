@@ -127,10 +127,11 @@ pub(super) fn collect_symbols(ast: &ast::Program) -> Result<Symbols, CompileErro
                         ),
                     });
                 }
+                use crate::lang::sections;
                 current_section = match name.as_str() {
-                    ".text" => CurrentSection::Text,
-                    ".data" => CurrentSection::Data,
-                    ".bss" => CurrentSection::Bss,
+                    s if s == sections::TEXT => CurrentSection::Text,
+                    s if s == sections::DATA => CurrentSection::Data,
+                    s if s == sections::BSS => CurrentSection::Bss,
                     _ => unreachable!("parser only accepts .text/.data/.bss"),
                 };
             }

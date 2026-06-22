@@ -1,6 +1,95 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use super::sections;
+
+/// Validates that a `.fl` source file uses section-based syntax.
+///
+/// `use` directives, blank lines and comments may appear outside sections, but
+/// all labels, instructions, data declarations and route declarations must be
+/// inside a `section ...` block.
+///
+/// Returns an error message if any such line is found.
+pub fn validate_sections(source: &str) -> Result<(), String> {
+    let mut current_section: Option<&str> = None;
+    let mut saw_section = false;
+
+    for line in source.lines() {
+        let t = line.trim();
+        if let Some(name) = sections::section_name(t) {
+            current_section = Some(name);
+            saw_section = true;
+            continue;
+        }
+
+        if t.is_empty() || t.starts_with(';') || parse_use(line).is_some() {
+            continue;
+        }
+
+        if !saw_section {
+            return Err(
+                ".fl files must use section blocks; add 'section .text', 'section .route', 'section .data' or 'section .bss'"
+                    .to_string(),
+            );
+        }
+
+        if current_section != Some(sections::ROUTE) && (t.starts_with("route ") || t == "route") {
+            return Err("route declarations must be inside 'section .route'".to_string());
+        }
+    }
+
+    if !saw_section {
+        return Err(
+            ".fl files must contain at least one section block: 'section .text', 'section .route', 'section .data' or 'section .bss'"
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+/// Lowers `section .route` declarations into the compiler's internal `route`
+/// directive form. This is a pre-processing step only; `.fl` files must use
+/// `section .route` — bare `route` directives are rejected by
+/// [`validate_sections`] before this function is called.
+///
+/// Other sections (`.data`, `.bss`, `.text`) are passed through unchanged.
+pub fn normalize_sections(source: &str) -> String {
+    let mut out = String::with_capacity(source.len());
+    let mut in_route = false;
+
+    for line in source.lines() {
+        let t = line.trim();
+
+        if let Some(name) = sections::section_name(t) {
+            in_route = name == sections::ROUTE;
+            if !in_route {
+                out.push_str(line);
+                out.push('\n');
+            }
+            continue;
+        }
+
+        if in_route {
+            if parse_use(line).is_some() {
+                // use directives pass through unchanged; expand() handles them.
+                out.push_str(line);
+                out.push('\n');
+            } else if !t.is_empty() && !t.starts_with(';') {
+                out.push_str("route ");
+                out.push_str(t);
+                out.push('\n');
+            }
+            continue;
+        }
+
+        out.push_str(line);
+        out.push('\n');
+    }
+
+    out
+}
+
 /// Expands every `use "path"` line in `source`, replacing it with the
 /// (recursively expanded) content of that file. Paths are resolved relative
 /// to `project_root`.
@@ -42,7 +131,12 @@ fn expand_rec(
                     path: canonical.clone(),
                     reason: e.to_string(),
                 })?;
-                let expanded = expand_rec(&content, root, visited)?;
+                validate_sections(&content).map_err(|reason| ExpandError {
+                    path: canonical.clone(),
+                    reason,
+                })?;
+                let normalized = normalize_sections(&content);
+                let expanded = expand_rec(&normalized, root, visited)?;
                 out.push_str(&expanded);
                 if !out.ends_with('\n') {
                     out.push('\n');
@@ -112,7 +206,7 @@ mod tests {
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use super::{expand, parse_use};
+    use super::{expand, parse_use, validate_sections};
 
     fn temp_project() -> std::path::PathBuf {
         let unique = SystemTime::now()
@@ -147,12 +241,29 @@ mod tests {
     #[test]
     fn expands_use_lines_with_trailing_comments() {
         let root = temp_project();
-        fs::write(root.join("lib.fl"), "mov r0, 7\n").unwrap();
+        fs::write(root.join("lib.fl"), "section .text\nmov r0, 7\n").unwrap();
 
         let expanded = expand("use \"lib.fl\" ; shared helpers\nhlt\n", &root).unwrap();
 
         assert!(expanded.contains("mov r0, 7"), "{expanded}");
         assert!(!expanded.contains("use \"lib.fl\""), "{expanded}");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn rejects_source_without_sections() {
+        let err = validate_sections("helper:\n  ret\n").unwrap_err();
+        assert!(err.contains("must use section blocks"), "{err}");
+    }
+
+    #[test]
+    fn rejects_included_files_without_sections() {
+        let root = temp_project();
+        fs::write(root.join("lib.fl"), "mov r0, 7\n").unwrap();
+
+        let err = expand("use \"lib.fl\"\nsection .text\nhlt\n", &root).unwrap_err();
+        assert!(err.to_string().contains("must use section blocks"), "{err}");
 
         let _ = fs::remove_dir_all(root);
     }

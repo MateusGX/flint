@@ -1,10 +1,6 @@
 use super::symbols::Symbols;
 use super::CompileError;
-
-/// HTTP methods a `route` directive may name. Kept as a flat list rather
-/// than a parsed enum — the only thing the rest of the pipeline does with a
-/// method is pass its (normalized) name on to the HTTP server's router.
-const HTTP_METHODS: &[&str] = &["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+use crate::lang::sections::HTTP_METHODS;
 
 /// A `route METHOD "/path" -> handler` directive, with `handler` resolved to
 /// a concrete instruction address (so the HTTP server can call straight into

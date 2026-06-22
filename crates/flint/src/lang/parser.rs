@@ -133,19 +133,21 @@ fn parse_route(tokens: &[SpannedToken], line: usize) -> Result<Item, ParseError>
 /// `section .text` | `section .data` | `section .bss` — switches which
 /// region subsequent labels/instructions belong to.
 fn parse_section(tokens: &[SpannedToken], line: usize) -> Result<Item, ParseError> {
+    use super::sections;
     match tokens {
         [_, SpannedToken {
             token: Token::Ident(name),
             ..
-        }] if name == ".text" || name == ".data" || name == ".bss" => Ok(Item::Section {
+        }] if sections::COMPILER_SECTIONS.contains(&name.as_str()) => Ok(Item::Section {
             name: name.clone(),
             line,
         }),
         _ => Err(ParseError {
             line,
-            message:
-                "expected a section directive: 'section .text', 'section .data', or 'section .bss'"
-                    .to_string(),
+            message: format!(
+                "expected a section directive: 'section {}'",
+                sections::COMPILER_SECTIONS.join("', 'section ")
+            ),
         }),
     }
 }

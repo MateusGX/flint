@@ -1,9 +1,5 @@
 //! Lexer, parser and bytecode compiler for Flint, the assembly-like
 //! language executed by `crate::vm`.
-//!
-//! [`compile_source`] is the single entry point most callers need: it runs
-//! source text through lexing, parsing and compilation and produces an
-//! [`crate::vm::Program`] ready to hand to [`crate::vm::Vm::run`].
 
 pub mod app;
 pub mod ast;
@@ -13,6 +9,7 @@ pub mod lexer;
 pub mod pages;
 pub mod parser;
 pub mod preprocessor;
+pub(crate) mod sections;
 
 pub use app::{load_app_dir, AppModule, LoadError};
 pub use compiler::{CompiledApp, Route};
@@ -20,28 +17,46 @@ pub use error::Error;
 pub use pages::{compile_page_source, load_pages_dir, CompiledPageSource, PageCompileError};
 pub use preprocessor::{expand as expand_source, ExpandError};
 
-/// Compiles Flint source text into a VM-ready [`crate::vm::Program`].
-///
-/// This is what you want for plain programs — including ones that define
-/// `fn` handlers — as long as you don't need their `route` metadata. For
-/// that (e.g. when loading an HTTP app), see [`compile_app_source`].
+/// Compiles Flint source into a VM-ready [`crate::vm::Program`].
+/// For source that declares HTTP routes, use [`compile_app_source`] instead.
 pub fn compile_source(source: &str) -> Result<crate::vm::Program, Error> {
     let tokens = lexer::lex(source)?;
     let ast = parser::parse(&tokens)?;
-    let program = compiler::compile(&ast)?;
-    Ok(program)
+    Ok(compiler::compile(&ast)?)
 }
 
-/// Compiles Flint "app" source — source that may declare `route` directives
-/// — into a [`CompiledApp`]: bytecode plus the routes it declares, with each
-/// handler resolved to a concrete address. [`load_app_dir`] is the usual way
-/// to reach this; call it directly only if you're compiling app source from
-/// somewhere other than a directory of files.
+/// Compiles Flint app source — source with `section .route` declarations —
+/// into a [`CompiledApp`] with bytecode and resolved route addresses.
+///
+/// Route declarations **must** use the section format:
+/// ```text
+/// section .route
+///     GET "/hello" -> say_hello
+///
+/// section .text
+/// say_hello:
+///     mov r0, "Hello!"
+///     ncall http.text, r0
+///     ret
+/// ```
 pub fn compile_app_source(source: &str) -> Result<CompiledApp, Error> {
+    preprocessor::validate_sections(source).map_err(|msg| {
+        Error::Compile(compiler::CompileError {
+            line: 1,
+            message: msg,
+        })
+    })?;
+    let normalized = preprocessor::normalize_sections(source);
+    compile_app_source_raw(&normalized)
+}
+
+/// Compiles already-normalized source without section validation.
+/// Used by the file-loading pipeline (after validate → normalize → expand)
+/// and by [`CompiledPageSource::compile`] for machine-generated page source.
+pub(crate) fn compile_app_source_raw(source: &str) -> Result<CompiledApp, Error> {
     let tokens = lexer::lex(source)?;
     let ast = parser::parse(&tokens)?;
-    let app = compiler::compile_app(&ast)?;
-    Ok(app)
+    Ok(compiler::compile_app(&ast)?)
 }
 
 #[cfg(test)]

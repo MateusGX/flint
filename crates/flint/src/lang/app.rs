@@ -105,22 +105,37 @@ pub fn load_app_dir(
             path: path.clone(),
             source,
         })?;
-        let expanded =
-            crate::lang::preprocessor::expand(&source, root).map_err(|e| LoadError::Include {
-                path: path.clone(),
-                message: e.to_string(),
-            })?;
-        let app =
-            crate::lang::compile_app_source(&expanded).map_err(|source| LoadError::Compile {
-                path: path.clone(),
-                source,
-            })?;
-        modules.push(AppModule {
-            program: Arc::new(app.program),
-            routes: app.routes,
-            source_path: path,
-        });
+        modules.push(compile_module_source(path, &source, root)?);
     }
 
     Ok(modules)
+}
+
+pub(crate) fn compile_module_source(
+    path: PathBuf,
+    source: &str,
+    project_root: &Path,
+) -> Result<AppModule, LoadError> {
+    crate::lang::preprocessor::validate_sections(source).map_err(|msg| LoadError::Include {
+        path: path.clone(),
+        message: msg,
+    })?;
+    let normalized = crate::lang::preprocessor::normalize_sections(source);
+    let expanded = crate::lang::preprocessor::expand(&normalized, project_root).map_err(|e| {
+        LoadError::Include {
+            path: path.clone(),
+            message: e.to_string(),
+        }
+    })?;
+    let app =
+        crate::lang::compile_app_source_raw(&expanded).map_err(|source| LoadError::Compile {
+            path: path.clone(),
+            source,
+        })?;
+
+    Ok(AppModule {
+        program: Arc::new(app.program),
+        routes: app.routes,
+        source_path: path,
+    })
 }

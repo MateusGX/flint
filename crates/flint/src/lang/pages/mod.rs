@@ -1,26 +1,39 @@
 //! Page templates for Flint apps.
 //!
-//! Pages live under `pages/` as `.flint.html` or `.flint.ui` files. Both
-//! suffixes are compiled identically — preamble directives, `<% %>` code
-//! blocks, `<%= %>` expressions, and raw HTML are all handled by
-//! [`html::compile`] — into ordinary `.fl` route modules before the existing
-//! lexer/parser/compiler pipeline runs, which keeps the VM and bytecode
-//! format unchanged.
+//! Pages live under `app/` as `.flint.ui` files. Each file must use the
+//! section-based format:
 //!
-//! By convention, `.flint.ui` pages build their body entirely from `<% %>`
-//! blocks that call the `ui.*` stdlib natives (e.g. `ncallr r14, ui.window,
-//! r14, "Title"`) to append Flint's default styled HTML to the `r14`
-//! accumulator, instead of writing raw HTML/CSS.
+//! ```text
+//! section .route
+//!     GET "/path"
+//!
+//! section .data
+//!     label  db "string value"
+//!
+//! section .render
+//!     window "Title"
+//!       card "Card"
+//!         field "Nome", r1
+//!       end
+//!     end
+//! ```
+//!
+//! The compiler produces an ordinary `.fl` route module, keeping the VM and
+//! bytecode format unchanged.
 
 use std::fmt;
 use std::fs;
 use std::path::Path;
-use std::sync::Arc;
 
-use crate::lang::{AppModule, LoadError};
+use crate::lang::{app, compiler::CompileError, AppModule, LoadError};
 
-mod html;
-mod shared;
+mod blocks;
+mod compiler;
+mod emit;
+mod parser;
+mod paths;
+mod render;
+mod source;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PageCompileError {
@@ -43,16 +56,41 @@ pub struct CompiledPageSource {
     pub source: String,
 }
 
-/// Compiles one page template into ordinary Flint source.
+impl CompiledPageSource {
+    /// Compiles the generated Flint source into a [`crate::lang::CompiledApp`].
+    ///
+    /// `project_root` is needed to resolve any `use "..."` directives that
+    /// were included via `@use` in the original `.flint.ui` file.
+    pub fn compile(
+        &self,
+        project_root: &Path,
+    ) -> Result<crate::lang::CompiledApp, crate::lang::Error> {
+        use crate::lang::preprocessor;
+
+        preprocessor::validate_sections(&self.source).map_err(|msg| {
+            crate::lang::Error::Compile(CompileError { line: 1, message: msg })
+        })?;
+        let normalized = preprocessor::normalize_sections(&self.source);
+        let expanded = preprocessor::expand(&normalized, project_root).map_err(|e| {
+            crate::lang::Error::Compile(CompileError { line: 1, message: e.to_string() })
+        })?;
+        crate::lang::compile_app_source_raw(&expanded)
+    }
+}
+
+/// Compiles one `.flint.ui` page into ordinary Flint source.
+///
+/// The source must use the section-based format (`section .route`, …,
+/// `section .render`).
 pub fn compile_page_source(
     source: &str,
     page_path: impl AsRef<Path>,
     pages_dir: impl AsRef<Path>,
 ) -> Result<CompiledPageSource, PageCompileError> {
-    html::compile(source, page_path.as_ref(), pages_dir)
+    compiler::compile(source, page_path.as_ref(), pages_dir.as_ref())
 }
 
-/// Compiles every supported page under `pages_dir` into independent app
+/// Compiles every `.flint.ui` page under `pages_dir` into independent app
 /// modules, matching how route `.fl` files are loaded.
 pub fn load_pages_dir(
     pages_dir: impl AsRef<Path>,
@@ -66,7 +104,7 @@ pub fn load_pages_dir(
     }
 
     let mut paths = Vec::new();
-    shared::collect_page_paths(dir, &mut paths).map_err(|source| LoadError::Io {
+    paths::collect_page_paths(dir, &mut paths).map_err(|source| LoadError::Io {
         path: dir.to_path_buf(),
         source,
     })?;
@@ -82,22 +120,7 @@ pub fn load_pages_dir(
             path: path.clone(),
             message: e.to_string(),
         })?;
-        let expanded = crate::lang::preprocessor::expand(&generated.source, root).map_err(|e| {
-            LoadError::Include {
-                path: path.clone(),
-                message: e.to_string(),
-            }
-        })?;
-        let app =
-            crate::lang::compile_app_source(&expanded).map_err(|source| LoadError::Compile {
-                path: path.clone(),
-                source,
-            })?;
-        modules.push(AppModule {
-            program: Arc::new(app.program),
-            routes: app.routes,
-            source_path: path,
-        });
+        modules.push(app::compile_module_source(path, &generated.source, root)?);
     }
 
     Ok(modules)
@@ -107,72 +130,88 @@ pub fn load_pages_dir(
 mod tests {
     use super::*;
 
+    fn section_source(route: &str, render: &str) -> String {
+        format!("section .route\n    {route}\n\nsection .render\n{render}\n")
+    }
+
     #[test]
-    fn compiles_html_and_expressions_to_flint_source() {
-        let source = r#"@page "/hello"
-@use "services/site.fl"
-<h1>Hello <%= r2 %></h1>
-<%
-mov r0, "name"
-ncallr r2, http.query, r0
-%>
-"#;
-        let page = compile_page_source(source, "pages/index.flint.html", "pages").unwrap();
+    fn compiles_section_page_to_flint_source() {
+        let source = section_source(
+            "GET \"/hello\"",
+            "    window \"Hello\"\n        text \"World\"\n    end\n",
+        );
+        let page = compile_page_source(&source, "app/hello.flint.ui", "app").unwrap();
         assert_eq!(page.method, "GET");
         assert_eq!(page.route_path, "/hello");
-        assert!(page.source.contains("use \"services/site.fl\""));
-        assert!(page.source.contains("mov r15, r2"));
-        assert!(page.source.contains("ncallr r15, string.from, r15"));
-        assert!(page.source.contains("ncall http.html, r14"));
-        assert!(page.source.contains("route GET \"/hello\" -> __page_index"));
+        assert!(page.source.contains("section .route"), "{}", page.source);
+        assert!(
+            page.source.contains("GET \"/hello\" -> __page_hello"),
+            "{}",
+            page.source
+        );
+        assert!(page.source.contains("section .text"), "{}", page.source);
+        assert!(page.source.contains("mov r14, \"\""), "{}", page.source);
+        assert!(
+            page.source.contains("ncallr r14, ui.window,"),
+            "{}",
+            page.source
+        );
+        assert!(
+            page.source.contains("ncall http.html, r14"),
+            "{}",
+            page.source
+        );
+    }
+
+    #[test]
+    fn rejects_legacy_page_format() {
+        let source = "@page \"/hello\"\n<h1>Hello</h1>\n";
+        let err = compile_page_source(source, "app/hello.flint.ui", "app").unwrap_err();
+        assert!(err.message.contains("section"), "{}", err.message);
     }
 
     #[test]
     fn infers_routes_from_page_paths() {
-        let page = compile_page_source("", "pages/users/[id].flint.html", "pages").unwrap();
+        let empty = "section .route\n\nsection .render\n";
+
+        let page = compile_page_source(empty, "app/users/[id].flint.ui", "app").unwrap();
         assert_eq!(page.route_path, "/users/:id");
 
-        let page = compile_page_source("", "pages/blog/index.flint.html", "pages").unwrap();
+        let page = compile_page_source(empty, "app/blog/index.flint.ui", "app").unwrap();
         assert_eq!(page.route_path, "/blog");
 
-        let page = compile_page_source("", "pages/index.flint.html", "pages").unwrap();
+        let page = compile_page_source(empty, "app/index.flint.ui", "app").unwrap();
         assert_eq!(page.route_path, "/");
 
-        let page = compile_page_source("", "pages/admin/index.flint.ui", "pages").unwrap();
+        let page = compile_page_source(empty, "app/admin/index.flint.ui", "app").unwrap();
         assert_eq!(page.route_path, "/admin");
     }
 
     #[test]
-    fn compiles_ui_pages_through_the_html_pipeline() {
-        let source = r#"@page "/dashboard"
-<%
-mov r1, "Ada"
-mov r15, "Dashboard"
-ncallr r14, ui.window, r14, r15
-mov r15, "Welcome"
-ncallr r14, ui.text, r14, r15
-mov r15, "Profile"
-ncallr r14, ui.card, r14, r15
-mov r15, "Name"
-ncallr r14, ui.field, r14, r15, r1
-mov r15, "API"
-mov r2, "/hello"
-ncallr r14, ui.button, r14, r15, r2
-ncallr r14, ui.card_end, r14
-ncallr r14, ui.window_end, r14
-%>
-"#;
-        let page = compile_page_source(source, "pages/dashboard.flint.ui", "pages").unwrap();
+    fn data_section_inlines_string_values() {
+        let source = "section .route\n    GET \"/\"\n\nsection .data\n    greeting  db \"Hello, World!\"\n\nsection .render\n    text greeting\n";
+        let page = compile_page_source(source, "app/index.flint.ui", "app").unwrap();
+        assert!(
+            page.source.contains("mov r15, \"Hello, World!\""),
+            "{}",
+            page.source
+        );
+        assert!(
+            page.source.contains("ncallr r14, ui.text,"),
+            "{}",
+            page.source
+        );
+    }
 
-        assert_eq!(page.method, "GET");
-        assert_eq!(page.route_path, "/dashboard");
-        assert!(page.source.contains("mov r14, \"\""));
-        assert!(page.source.contains("mov r1, \"Ada\""));
-        assert!(page.source.contains("ncallr r14, ui.window, r14, r15"));
-        assert!(page.source.contains("ncallr r14, ui.window_end, r14"));
-        assert!(page.source.contains("ncall http.html, r14"));
-        assert!(page
-            .source
-            .contains("route GET \"/dashboard\" -> __page_dashboard"));
+    #[test]
+    fn use_directives_are_emitted_before_handler() {
+        let source =
+            "@use \"services/site.fl\"\n\nsection .route\n    GET \"/\"\n\nsection .render\n";
+        let page = compile_page_source(source, "app/index.flint.ui", "app").unwrap();
+        assert!(
+            page.source.contains("use \"services/site.fl\""),
+            "{}",
+            page.source
+        );
     }
 }
