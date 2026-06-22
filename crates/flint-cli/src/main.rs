@@ -295,7 +295,9 @@ fn is_watched_file(path: &std::path::Path) -> bool {
 async fn cmd_run(args: &[String]) {
     let path = resolve_project_dir(args);
     if !bytecode::is_bytecode_path(&path) {
-        out::error("'flint run' only accepts .flintbc files; use 'flint serve' to run a source project");
+        out::error(
+            "'flint run' only accepts .flintbc files; use 'flint serve' to run a source project",
+        );
         process::exit(1);
     }
     serve_bytecode(&path).await;

@@ -26,8 +26,14 @@ pub fn site(name: &str) -> Vec<(PathBuf, String)> {
     vec![
         (PathBuf::from("flint.toml"), manifest(name)),
         (PathBuf::from("components/navbar.fl"), site_navbar()),
-        (PathBuf::from("pages/index.flint.ui"), static_home_page(name)),
-        (PathBuf::from("pages/about.flint.ui"), static_about_page(name)),
+        (
+            PathBuf::from("pages/index.flint.ui"),
+            static_home_page(name),
+        ),
+        (
+            PathBuf::from("pages/about.flint.ui"),
+            static_about_page(name),
+        ),
     ]
 }
 
