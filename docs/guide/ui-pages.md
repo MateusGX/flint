@@ -1,13 +1,22 @@
 # UI Pages
 
-UI pages live under `pages/`, end with `.flint.ui`, and render with Flint's
-built-in default style. They compile through the exact same pipeline as
-[Visual Pages](/guide/pages) — there is no separate control language. By
-convention, a UI page's body is just `<% ... %>` code that calls `ui.*`
-natives to append styled HTML fragments to the `r14` accumulator.
+UI pages live under `app/`, end with `.flint.ui`, and compile into normal
+Flint route modules. They use section blocks:
 
 ```txt
-pages/
+section .route
+    GET "/"
+
+section .render
+    window "Dashboard"
+        text "Rendered with Flint UI."
+    end
+```
+
+UI pages use sections only.
+
+```txt
+app/
 ├── index.flint.ui
 └── users/
     └── [id].flint.ui
@@ -15,23 +24,19 @@ pages/
 
 ## Your First UI Page
 
-Create `pages/index.flint.ui`:
+Create `app/index.flint.ui`:
 
 ```txt
-@page "/"
-<%
-mov r15, "Dashboard"
-ncallr r14, ui.window, r14, r15
-mov r15, "This page uses Flint UI natives."
-ncallr r14, ui.text, r14, r15
-mov r15, "Actions"
-ncallr r14, ui.card, r14, r15
-mov r15, "Open API"
-mov r1, "/hello"
-ncallr r14, ui.button, r14, r15, r1
-ncallr r14, ui.card_end, r14
-ncallr r14, ui.window_end, r14
-%>
+section .route
+    GET "/"
+
+section .render
+    window "Dashboard"
+        text "This page uses Flint UI controls."
+        card "Actions"
+            btn "Open API", "/hello"
+        end
+    end
 ```
 
 Run:
@@ -46,102 +51,221 @@ Open:
 http://127.0.0.1:3000/
 ```
 
-The page is compiled into a normal route handler that returns HTML through
-`http.html`.
+The page compiler emits a route handler that returns HTML through `http.html`.
 
-## Directives
+## Sections
 
-UI pages use the same preamble directives as HTML pages:
+UI pages support these sections:
 
-| Directive | Meaning |
+| Section | Purpose |
 |---|---|
-| `@page` | Serve the page with `GET` and infer the path from the file name. |
-| `@page "/path"` | Serve the page with `GET /path`. |
-| `@page POST "/path"` | Serve the page with an explicit method and path. |
-| `@route METHOD "/path"` | Equivalent explicit route form. |
-| `@use "path.fl"` | Include shared Flint code before the generated handler. |
+| `section .route` | Optional method and path for the generated handler. |
+| `section .data` | String constants for render commands. |
+| `section .bss` | Scratch memory cells emitted into generated Flint source. |
+| `section .text` | Raw Flint instructions that run before rendering. |
+| `section .render` | UI DSL commands that append styled HTML. |
 
-## `ui.*` Natives
+The first non-comment, non-`@use` line must be a `section` header.
 
-Every `ui.*` native takes the current HTML accumulator as its first argument
-and returns the new accumulator value — the same shape as `string.concat`,
-but appending a styled fragment instead of a literal. `ncall`/`ncallr`
-arguments must be registers, so string literals go through a scratch register
-first:
+## Routes
+
+Inside `section .route`, write one method and path:
 
 ```txt
-mov r15, "Profile"
-ncallr r14, ui.card, r14, r15
+section .route
+    POST "/tasks/new"
 ```
 
-| Native | Call | Appends |
-|---|---|---|
-| `ui.window` | `ncallr dst, ui.window, html, title` | Document shell, default stylesheet, browser tab title (`<title>`), and a styled page frame with `title`. |
-| `ui.window_end` | `ncallr dst, ui.window_end, html` | Closes a frame opened with `ui.window`. |
-| `ui.card` | `ncallr dst, ui.card, html, title` | Bordered content panel with `title`. |
-| `ui.card_end` | `ncallr dst, ui.card_end, html` | Closes a panel opened with `ui.card`. |
-| `ui.section` | `ncallr dst, ui.section, html, title` | Unframed content group with `title`. |
-| `ui.section_end` | `ncallr dst, ui.section_end, html` | Closes a group opened with `ui.section`. |
-| `ui.row` | `ncallr dst, ui.row, html` | Horizontal responsive layout. |
-| `ui.row_end` | `ncallr dst, ui.row_end, html` | Closes a layout opened with `ui.row`. |
-| `ui.column` | `ncallr dst, ui.column, html` | Vertical layout. |
-| `ui.column_end` | `ncallr dst, ui.column_end, html` | Closes a layout opened with `ui.column`. |
-| `ui.title` | `ncallr dst, ui.title, html, value` | Heading. |
-| `ui.text` | `ncallr dst, ui.text, html, value` | Paragraph text. |
-| `ui.field` | `ncallr dst, ui.field, html, label, value` | Label/value display row. |
-| `ui.button` | `ncallr dst, ui.button, html, label, href` | Link styled as a button. |
-| `ui.form` | `ncallr dst, ui.form, html, method, action` | HTML form opener. |
-| `ui.form_end` | `ncallr dst, ui.form_end, html` | Closes a form opened with `ui.form`. |
-| `ui.input` | `ncallr dst, ui.input, html, label, name` | Labeled text input inside a form. |
-| `ui.submit` | `ncallr dst, ui.submit, html, label` | Submit button inside a form. |
+If the route section has no route line, the path is inferred from the file
+path and the method defaults to `GET`:
 
-`title`, `value`, `label`, `href`, `method`, `action`, and `name` must all be
-`str` registers. `ui.title`, `ui.text`, `ui.field`, and the label arguments of
-`ui.button`/`ui.input`/`ui.submit` are HTML-escaped; `ui.button`'s `href`,
-`ui.form`'s `method`/`action`, and `ui.input`'s `name` are attribute-escaped.
+| File | Inferred route |
+|---|---|
+| `app/index.flint.ui` | `GET /` |
+| `app/tasks/index.flint.ui` | `GET /tasks` |
+| `app/tasks/[id].flint.ui` | `GET /tasks/:id` |
 
-## Dynamic Values
+## Includes
 
-Use normal Flint code to prepare values before passing them to `ui.*`
-natives. Values must already be `str` — convert with `string.from` first if
-you have an `int` or `float`:
+Use `@use` before the first section to include shared `.fl` code:
 
 ```txt
-@page "/hello"
-<%
-mov r0, "name"
-ncallr r1, http.query, r0
-mov r15, "Hello"
-ncallr r14, ui.window, r14, r15
-mov r15, "Name"
-ncallr r14, ui.field, r14, r15, r1
-ncallr r14, ui.window_end, r14
-%>
+@use "services/tasks.fl"
+
+section .route
+    GET "/tasks"
+
+section .text
+    call tasks_service_list
+    ncallr r1, json.stringify, r0
+
+section .render
+    window "Tasks"
+        code r1
+    end
 ```
 
-`ui.field` HTML-escapes both `label` and `value` before appending
-`<dl class="flint-field"><dt>Name</dt><dd>...</dd></dl>` to `r14`.
+`@use` paths are resolved from the project root, just like `use` in `.fl`
+files. Included files must use sections.
+
+## Render Commands
+
+`section .render` is a small control DSL. String literals, identifiers from
+`section .data`, and registers can be passed as arguments. Blocks close with
+`end`.
+
+Common commands:
+
+| Command | Emits |
+|---|---|
+| `window "Title" ... end` | Full page shell and frame. |
+| `card "Title" ... end` | Raised content panel. |
+| `block "Title" ... end` | Unframed content section; optional second arg adds a subtitle. |
+| `row ... end` / `col ... end` | Side-by-side column layout (`display:table`). |
+| `text "Value"` | Paragraph text. |
+| `title "Value"` | Heading. |
+| `field "Label", r1` | Label/value row. |
+| `btn "Label", "/href"` | Link styled as a button. |
+| `form "POST", "/path" ... end` | HTML form. |
+| `input "Label", "name"` | Text input. |
+| `submit "Save"` | Submit button. |
+
+The showcase under `examples/ui-showcase/app/` demonstrates the larger set:
+navbar, breadcrumb, tables, tabs, dialogs, accordions, trees, forms, status
+badges, meters, progress bars, and layout primitives.
+
+## Data and Dynamic Values
+
+Use `section .data` for reusable strings:
+
+```txt
+section .route
+    GET "/hello"
+
+section .data
+    greeting db "Hello from data"
+
+section .render
+    window "Home"
+        text greeting
+    end
+```
+
+Use `section .text` for request data and other logic:
+
+```txt
+section .route
+    GET "/hello"
+
+section .text
+    mov r0, "name"
+    ncallr r1, http.query, r0
+
+section .render
+    window "Hello"
+        field "Name", r1
+    end
+```
+
+Generated page handlers reserve `r14` for the HTML accumulator and use `r15`,
+`r13`, `r12`, `r11`, and `r10` as scratch registers while compiling render
+arguments.
+
+## Components
+
+Reusable UI fragments are plain Flint functions that receive `r14` (the HTML
+accumulator), append markup to it, and return. Because `call` and Flint
+mnemonics pass through `section .render` unchanged, any label in scope can be
+called directly inside the render DSL.
+
+### Shared components with `@use`
+
+Put the component in a `.fl` file under `components/`:
+
+```txt
+; components/site_nav.fl
+section .text
+site_nav:
+    ncallr r14, ui.navbar, r14
+    mov r15, "Home"
+    mov r13, "/"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    mov r15, "Tasks"
+    mov r13, "/tasks"
+    ncallr r14, ui.nav_item, r14, r15, r13
+    ncallr r14, ui.navbar_end, r14
+    ret
+```
+
+Include it with `@use` and call it inside `section .render`:
+
+```txt
+@use "components/site_nav.fl"
+
+section .route
+    GET "/tasks"
+
+section .render
+    window "Tasks"
+        call site_nav
+        card "All tasks"
+            text "..."
+        end
+    end
+```
+
+Any number of pages can `@use` the same file. The function name must be unique
+across the project (see [label namespace rules](/reference/language#labels)).
+
+### Inline helpers
+
+For fragments used only within one page, define a label in `section .text` and
+call it from `section .render`:
+
+```txt
+section .route
+    GET "/dashboard"
+
+section .text
+render_header:
+    mov r15, "Dashboard"
+    ncallr r14, ui.title, r14, r15
+    mov r15, "Welcome back."
+    ncallr r14, ui.text, r14, r15
+    ret
+
+section .render
+    window "Dashboard"
+        call render_header
+        card "Stats"
+            text "..."
+        end
+    end
+```
+
+### Component contract
+
+- Read `r14` as the incoming HTML accumulator and write the updated value back
+  to `r14` before `ret`.
+- Use `r0`–`r9` for internal work; those registers are free inside the component.
+- Do not rely on `r15`, `r13`, `r12`, `r11`, or `r10` surviving across `call`
+  — the render compiler uses them as scratch registers for its own arguments.
 
 ## Forms
 
 Forms generate regular HTML forms with the default Flint style:
 
 ```txt
-@page "/tasks/new"
-<%
-mov r15, "New task"
-ncallr r14, ui.window, r14, r15
-mov r15, "POST"
-mov r1, "/tasks"
-ncallr r14, ui.form, r14, r15, r1
-mov r15, "Title"
-mov r1, "title"
-ncallr r14, ui.input, r14, r15, r1
-mov r15, "Create"
-ncallr r14, ui.submit, r14, r15
-ncallr r14, ui.form_end, r14
-ncallr r14, ui.window_end, r14
-%>
+section .route
+    GET "/tasks/new"
+
+section .render
+    window "New task"
+        form "POST", "/tasks"
+            input "Title", "title"
+            submit "Create"
+        end
+    end
 ```
 
 Read submitted values from the target route with `http.form`.
@@ -151,19 +275,22 @@ Read submitted values from the target route with `http.form`.
 This page:
 
 ```txt
-@page "/"
-<%
-mov r15, "Home"
-ncallr r14, ui.window, r14, r15
-mov r15, "Welcome"
-ncallr r14, ui.text, r14, r15
-ncallr r14, ui.window_end, r14
-%>
+section .route
+    GET "/"
+
+section .render
+    window "Home"
+        text "Welcome"
+    end
 ```
 
 generates a route handler shaped like this:
 
 ```txt
+section .route
+    GET "/" -> __page_index
+
+section .text
 __page_index:
     mov r14, ""
     mov r15, "Home"
@@ -173,10 +300,7 @@ __page_index:
     ncallr r14, ui.window_end, r14
     ncall http.html, r14
     ret
-
-route GET "/" -> __page_index
 ```
 
-The VM does not have a special UI mode. `.flint.ui` pages compile through the
-same path as `.flint.html` pages — `ui.*` natives are ordinary stdlib natives
-that run when the handler executes.
+The VM does not have a special UI mode. `ui.*` functions are ordinary stdlib
+natives that run when the generated handler executes.

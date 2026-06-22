@@ -1,27 +1,34 @@
 # Language Syntax
 
 This page describes Flint source syntax: tokens, lines, declarations, operands,
-modules, includes, routes, and page templates. For individual opcodes, see
+modules, includes, routes, and UI pages. For individual opcodes, see
 [Instruction Set](/reference/instructions).
 
 ## Source Files
 
-Flint route code lives in `.fl` files. Each non-empty line is one of:
+Application source code lives in `.fl` files. Code must be grouped into
+section blocks. Each non-empty line is one of:
 
 - a label
-- a route directive
+- a section directive
+- a route entry inside `section .route`
 - an instruction
 - a `use` include directive
+
+`use` directives, comments, and blank lines may appear before the first
+section. Everything else must be inside a section.
 
 ```txt
 use "services/tasks.fl"
 
+section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "Hello"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 ```
 
 Indentation is optional. Examples use four spaces after a label for
@@ -76,8 +83,8 @@ Common convention:
 |---|---|
 | `r0` | First argument and main return value. |
 | `r1` | Secondary return value, flag, or scratch. |
-| `r2` to `r13` | Scratch values. |
-| `r14`, `r15` | Scratch values in normal `.fl`; reserved by generated pages. |
+| `r2` to `r9` | Scratch values. |
+| `r10` to `r15` | Scratch values in normal `.fl`; used by generated UI page handlers. |
 
 The VM does not enforce this convention.
 
@@ -175,10 +182,17 @@ prefixing every label with the handler's name.
 
 ## Sections
 
-`section .text`, `section .data`, and `section .bss` directives switch which
-region subsequent labels and instructions belong to. `.text` is the default —
-files with no `section` directive at all are entirely `.text`, and compile
-exactly as before.
+Application `.fl` files support four source sections: `.route`, `.text`,
+`.data`, and `.bss`. They must contain at least one section block. Labels,
+instructions, data declarations, bss reservations, and route entries cannot
+appear before a section header.
+
+`section .route` contains HTTP route entries and is handled by the
+preprocessor. It lowers route entries to compiler route metadata before the
+compiler sees the remaining `.text`, `.data`, and `.bss` sections.
+
+`section .text`, `section .data`, and `section .bss` switch which region
+subsequent labels and instructions belong to.
 
 ```txt
 section .data
@@ -204,6 +218,9 @@ label must be immediately followed by exactly one `data <value>` or
 `res <count>` pseudo-instruction, which reserves the next memory cell(s) for
 that label.
 
+Switching sections while a `.data`/`.bss` label is still waiting for its
+`data`/`res` directive is a compile error.
+
 - `data <value>` (only valid in `.data`) reserves one memory cell initialized
   to `<value>` — an int, float, or string literal.
 - `res <count>` (only valid in `.bss`) reserves `<count>` zero-initialized
@@ -215,6 +232,10 @@ read or write through it, as in the example above. `.text` and `.data`/`.bss`
 labels share one flat namespace, so a name can't be reused across sections.
 Local labels (`.name:`) are only valid in `.text`.
 
+Plain `mov reg, text_label` is not a function pointer operation. `mov` can
+load registers, numbers, strings, floats, and `.data`/`.bss` addresses; use
+`call`, `jmp`, and conditional jumps for code labels.
+
 The combined size of all `.data`/`.bss` cells counts against the 4096-slot
 linear memory described under [Linear Memory](instructions.md#linear-memory) —
 exceeding it is a compile error.
@@ -224,19 +245,22 @@ exceeding it is a compile error.
 Routes connect HTTP methods and paths to (global) labels:
 
 ```txt
-route METHOD "/path" -> handler
+section .route
+    METHOD "/path" -> handler
 ```
 
 Example:
 
 ```txt
+section .route
+    GET "/users/:id" -> show_user
+
+section .text
 show_user:
     mov r0, "id"
     ncallr r1, http.param, r0
     ncall http.text, r1
     ret
-
-route GET "/users/:id" -> show_user
 ```
 
 Supported methods:
@@ -261,9 +285,10 @@ use "services/tasks.fl"
 Paths are resolved relative to the project root, the directory that contains
 `flint.toml`.
 
-Includes are recursive. A file included more than once is inlined only the
-first time. After expansion, all global labels share one flat namespace, so
-prefer specific names:
+Included files must use section blocks too; shared services and repositories
+usually put labels under `section .text`. Includes are recursive. A file
+included more than once is inlined only the first time. After expansion, all
+global labels share one flat namespace, so prefer specific names:
 
 ```txt
 tasks_get_found:
@@ -282,7 +307,7 @@ they're mangled per enclosing global label and can't collide across handlers.
 
 ## Modules
 
-`flint serve` compiles each `.fl` file directly inside the configured `routes`
+`flint serve` compiles each `.fl` file directly inside the configured `api`
 directory as a separate module. It does not recursively load nested `.fl`
 files.
 
@@ -295,50 +320,44 @@ Each module has:
 Files in `services/` or `repositories/` are not loaded by themselves. They
 become part of a route module only when included with `use`.
 
-## Page Templates
+## UI Pages
 
-Pages live under the configured `pages` directory and compile into normal route
-modules before the normal Flint compiler runs. Flint supports HTML-first pages
-ending in `.flint.html` and control-first UI pages ending in `.flint.ui`.
+Pages live under the configured `app` directory, end in `.flint.ui`, and
+compile into normal route modules before the normal Flint compiler runs.
 
 Minimal page:
 
-```html
-@page "/"
-<!doctype html>
-<h1>Hello</h1>
-```
-
-Page directives are read from the preamble at the top of the file:
-
-| Directive | Meaning |
-|---|---|
-| `@page` | Infer a `GET` route from the file path. |
-| `@page "/path"` | Declare `GET /path`. |
-| `@page POST "/path"` | Declare an explicit method and path. |
-| `@route METHOD "/path"` | Alternate route form. |
-| `@use "path.fl"` | Include shared Flint code. |
-
-Template blocks:
-
-| Block | Meaning |
-|---|---|
-| `<% ... %>` | Insert normal Flint instructions. |
-| `<%= expr %>` | Append an HTML-escaped register or literal to the HTML response. |
-
-Generated page handlers reserve `r14` for the HTML accumulator and `r15` for
-scratch values. See [Visual Pages](/guide/pages) for examples.
-
-UI pages use controls instead of HTML:
-
 ```txt
-@page "/"
-window "Dashboard" {
-    text "Rendered with default Flint styling."
-    card "Actions" {
-        button "Open API" "/hello"
-    }
-}
+section .route
+    GET "/"
+
+section .render
+    window "Dashboard"
+        text "Rendered with default Flint styling."
+    end
 ```
 
-See [UI Pages](/guide/ui-pages) for the full control list.
+UI page sections:
+
+| Section | Meaning |
+|---|---|
+| `section .route` | Optional page route. Lines use `METHOD "/path"` without `-> handler`. |
+| `section .data` | Page string constants: `label db "value"`. |
+| `section .bss` | Page memory reservations: `label res N`. |
+| `section .text` | Raw Flint instructions inserted before rendering. |
+| `section .render` | UI render commands such as `window`, `card`, `text`, and `btn`. |
+
+`@use "path.fl"` may appear before the first section to include shared `.fl`
+code into the generated route module. Included files must use sections.
+
+If `section .route` is empty, the page route is inferred from the file path:
+
+| File | Route |
+|---|---|
+| `app/index.flint.ui` | `GET /` |
+| `app/blog/index.flint.ui` | `GET /blog` |
+| `app/users/[id].flint.ui` | `GET /users/:id` |
+
+Generated page handlers reserve `r14` for the HTML accumulator and use `r15`,
+`r13`, `r12`, `r11`, and `r10` as scratch registers while rendering. See
+[UI Pages](/guide/ui-pages) for examples.

@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Flint',
-  description: 'A small register-based language and HTTP runtime for APIs and server-rendered pages',
+  description: 'A small register-based language and HTTP runtime for APIs and server-rendered UI pages',
   lang: 'en-US',
 
   sitemap: {
@@ -25,7 +25,6 @@ export default defineConfig({
           { text: 'Introduction', link: '/guide/introduction' },
           { text: 'Installation', link: '/guide/installation' },
           { text: 'First API', link: '/guide/first-api' },
-          { text: 'Visual Pages', link: '/guide/pages' },
           { text: 'UI Pages', link: '/guide/ui-pages' },
           { text: 'Core Concepts', link: '/guide/core-concepts' },
           { text: 'Project Structure', link: '/guide/project-structure' },

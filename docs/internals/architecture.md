@@ -20,9 +20,9 @@ Plain `.fl` route source goes through:
 
 ```txt
 source text
+  -> lang::preprocessor::validate_sections + normalize_sections + expand
   -> lang::lexer::lex
   -> lang::parser::parse
-  -> lang::preprocessor::expand
   -> lang::compiler::compile_app
   -> vm::Program + routes
 ```
@@ -35,13 +35,12 @@ The public convenience entry points are:
 | `lang::compile_app_source` | Compile source with route metadata. |
 | `lang::load_app_dir` | Compile every direct `.fl` file in a routes directory. |
 
-## Page Pipeline
+## UI Page Pipeline
 
-Server-rendered pages go through an extra source-generation step:
+Server-rendered UI pages go through an extra source-generation step:
 
 ```txt
-pages/**/*.flint.html
-pages/**/*.flint.ui
+app/**/*.flint.ui
   -> lang::pages::compile_page_source
   -> generated .fl source
   -> preprocessor
@@ -50,11 +49,10 @@ pages/**/*.flint.ui
 ```
 
 The page compiler does not add VM features. It emits normal Flint code that
-uses `string.concat`, `string.from`, and `http.html`. `.flint.html` and
-`.flint.ui` pages compile through the exact same path — there is no separate
-UI mode. By convention, `.flint.ui` pages write their body entirely as `<% %>`
-code that calls `ui.*` stdlib natives (see [Native Functions](/reference/native-functions))
-to append Flint's default styled HTML and CSS to the accumulator.
+uses `ui.*` stdlib natives and `http.html`. `.flint.ui` files are
+section-based: `section .route` declares the page route, `section .text`
+inserts raw Flint instructions, and `section .render` is compiled into calls
+that append Flint's default styled HTML and CSS to the accumulator.
 
 ## Lexer
 
@@ -168,11 +166,22 @@ The CLI is under `crates/flint-cli/src/`:
 | `main.rs` | Command parsing and command dispatch. |
 | `config.rs` | `flint.toml` parsing and defaults. |
 | `templates.rs` | `flint new` project templates. |
-| `build.rs` | Standalone release build generation. |
+| `build.rs` | Project bytecode build flow. |
+| `bytecode.rs` | Portable `.flintbc` encode/decode and payload obfuscation. |
+| `site.rs` | Static HTML export for UI-only projects. |
 | `out.rs` | Terminal output helpers. |
+| `util.rs` | String escaping helpers used by template generation. |
 
-`flint build` generates a Rust project under `.flint-build/` and embeds all
-route source and generated page source as raw strings.
+`flint build` compiles source modules and generated UI pages to VM-ready
+bytecode, writes `dist/<project-name>.flintbc`, and stores no source text in
+the artifact. `flint run <file.flintbc>` decodes that artifact into
+`AppModule`s and serves it directly.
+
+`flint build --static` loads only UI pages, executes each page handler through
+the same VM/`ui.*` path with a synthetic empty `GET` request, and writes the
+resulting HTML to directory-index files under `dist/`. Inline Flint UI `<style>` and `<script>` blocks are stripped from the rendered
+HTML and the shared assets are written once as `dist/flint.css` and
+`dist/flint.js` directly from the built-in `UI_CSS` / `UI_JS` constants.
 
 ## Extension Map
 
@@ -181,7 +190,7 @@ route source and generated page source as raw strings.
 | Add an instruction | `vm/instr.rs`, `vm/ops/*`, `vm/mod.rs`, `lang/compiler/instructions.rs`. |
 | Add a pure native | New file in `crates/flint/src/stdlib/<namespace>/`, register in that namespace. |
 | Add an HTTP native | New file in `crates/flint/src/http/natives/`, register in `http/natives/mod.rs`. |
-| Add page directive syntax | `crates/flint/src/lang/pages/`. |
+| Add UI page section or render syntax | `crates/flint/src/lang/pages/`. |
 | Add a `ui.*` native | New file in `crates/flint/src/stdlib/ui/`, register in `stdlib/ui/mod.rs`. |
 | Add route loading behavior | `crates/flint/src/lang/app.rs` or `crates/flint-cli/src/main.rs`. |
 | Add CLI behavior | `crates/flint-cli/src/main.rs` and supporting module. |

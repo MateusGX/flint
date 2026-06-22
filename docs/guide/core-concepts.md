@@ -27,8 +27,8 @@ Common convention:
 |---|---|
 | `r0` | First argument and main return value. |
 | `r1` | Secondary return value, flag, or scratch. |
-| `r2` to `r13` | Temporary values. |
-| `r14`, `r15` | Normal scratch in `.fl`; reserved by generated pages. |
+| `r2` to `r9` | Temporary values. |
+| `r10` to `r15` | Normal scratch in `.fl`; used by generated UI page handlers. |
 
 The VM does not enforce this convention, but it keeps programs easier to read.
 
@@ -59,6 +59,50 @@ ncall http.text, r0
 There are no expressions like `a + b` inside operands. Put intermediate values
 in registers.
 
+## Sections
+
+Application `.fl` files must use section blocks. `use`, blank lines, and
+comments may appear before the first section; labels, instructions, route
+entries, `data`, and `res` must be inside a section.
+
+```txt
+section .route
+    GET "/hello" -> say_hello
+
+section .text
+say_hello:
+    mov r0, "Hello"
+    ncall http.text, r0
+    ret
+```
+
+| Section | What belongs there |
+|---|---|
+| `section .route` | HTTP route entries: `METHOD "/path" -> handler`. |
+| `section .text` | Labels and executable instructions. |
+| `section .data` | Initialized memory cells: `label:` followed by `data value`. |
+| `section .bss` | Zeroed memory cells: `label:` followed by `res count`. |
+
+`section .route` is handled by the preprocessor. It becomes the compiler's
+internal route metadata before `.text`, `.data`, and `.bss` are compiled.
+
+Memory sections give names to fixed addresses:
+
+```txt
+section .data
+counter:
+    data 41
+
+section .text
+main:
+    mov r0, counter
+    load r1, [r0]
+    ret
+```
+
+`mov r0, counter` loads the address of `counter`, not the stored value. Use
+`load` and `store` to read or write memory through that address.
+
 ## Native Calls
 
 Native functions are implemented by the runtime.
@@ -79,6 +123,9 @@ Arguments must be registers. For the full list, see
 [Native Functions](/reference/native-functions).
 
 ## Functions and Calls
+
+The examples below are `.text` fragments; full `.fl` files still need a
+`section .text` header.
 
 Define a label with `name:`:
 
@@ -121,37 +168,47 @@ and `jge` use the most recent comparison.
 
 ## Modules and Includes
 
-Each route file in `routes/` is compiled independently. Files in `services/`
+Each route file in `api/` is compiled independently. Files in `services/`
 and `repositories/` become part of a route module only when included:
 
 ```txt
 use "services/tasks.fl"
 ```
 
+Included `.fl` files must use section blocks too; shared functions normally
+live under `section .text`.
+
 After includes are expanded, all global labels share one namespace. Use
 specific names such as `tasks_get_found` instead of `found`, or use a local
 label (`.found:`) under each handler — local labels are mangled per
 enclosing label and can't collide across handlers.
 
-## Routes and Pages
+## Routes and UI Pages
 
 A route declaration connects HTTP to a label:
 
 ```txt
+section .route
+    GET "/users" -> list_users
+
+section .text
 list_users:
     ncallr r0, json.array
     ncall http.json, r0
     ret
-
-route GET "/users" -> list_users
 ```
 
-A visual page compiles to a generated route:
+A UI page compiles to a generated route:
 
-```html
-@page "/"
-<h1>Hello</h1>
+```txt
+section .route
+    GET "/"
+
+section .render
+    window "Home"
+        text "Hello"
+    end
 ```
 
-Use routes when your source is mostly logic. Use pages when your source is
-mostly HTML.
+Use routes when your source is mostly request/response logic. Use UI pages
+when your source is mostly server-rendered controls.

@@ -1,68 +1,69 @@
 # Introduction
 
-`Flint` is a small programming language and HTTP runtime. You write route
-handlers in `.fl` files, HTML-first pages in `.flint.html` files, or
-control-first pages in `.flint.ui` files. The CLI compiles them to bytecode and
-serves them with a fresh virtual machine per request.
+`Flint` is a small programming language and HTTP runtime. You write HTTP
+route modules in `.fl` files and server-rendered UI pages in `.flint.ui`
+files. The CLI compiles both forms to bytecode and serves them with a fresh
+virtual machine per request.
 
 The language is assembly-like on purpose: every line does one visible thing.
-There are registers, labels, jumps, calls, and native functions for practical
-work such as HTTP, JSON, strings, math, environment variables, time, and UUIDs.
+There are registers, labels, jumps, calls, sections, and native functions for
+practical work such as HTTP, JSON, strings, math, environment variables, time,
+UUIDs, and UI rendering.
 
 ## A Complete Route
 
 This handler responds to `GET /hello` with plain text:
 
 ```txt
+section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "Hello!"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 ```
 
 Read it from top to bottom:
 
 | Line | Meaning |
 |---|---|
-| `say_hello:` | Defines a label the route below can target. |
+| `section .route` | Starts route declarations. |
+| `GET "/hello" -> say_hello` | Maps `GET /hello` to a global label. |
+| `section .text` | Starts executable code. |
+| `say_hello:` | Defines the route handler label. |
 | `mov r0, "Hello!"` | Stores a string in register `r0`. |
 | `ncall http.text, r0` | Sets the response body to plain text. |
 | `ret` | Returns from the handler. |
-| `route GET "/hello" -> say_hello` | Maps an HTTP route to the handler. |
 
-## A Complete Page
+## A Complete UI Page
 
-This page responds to `GET /` with HTML:
+UI pages live under `app/` and end with `.flint.ui`. They use sections too:
 
-```html
-@page "/"
-<!doctype html>
-<h1>Hello from Flint</h1>
+```txt
+section .route
+    GET "/"
+
+section .render
+    window "Home"
+        text "Hello from Flint UI"
+        card "Actions"
+            btn "Open API", "/hello"
+        end
+    end
 ```
 
-Pages can include Flint instructions:
-
-```html
-@page "/hello"
-<%
-mov r0, "name"
-ncallr r1, http.query, r0
-%>
-<h1>Hello <%= r1 %></h1>
-```
-
-The page compiler turns this into a normal route module that calls
-`http.html`.
+The page compiler turns this into a normal `.fl` route module that builds an
+HTML accumulator with `ui.*` natives and returns it with `http.html`.
 
 ## What Runs
 
 ```txt
-.fl routes, .flint.html pages, and .flint.ui pages
+.fl route modules and .flint.ui pages
       |
       v
-lexer / parser / page compiler / preprocessor
+preprocessor / parser / page compiler
       |
       v
 bytecode program plus route metadata
@@ -76,18 +77,21 @@ HTTP response
 
 ## What Makes Flint Different
 
-- There are 16 general registers: `r0` through `r15`.
+- There are 16 registers: `r0` through `r15`.
 - Registers are shared by all functions in a compiled module.
+- Every `.fl` source file must use section blocks.
 - Route files are compiled independently, then registered on one HTTP router.
-- `use "path.fl"` inlines shared code before compilation.
+- `use "path.fl"` inlines shared `.fl` code before compilation.
+- `@use "path.fl"` at the top of a `.flint.ui` page includes shared `.fl`
+  code into the generated route module.
 - JSON is a runtime value, not a string convention.
-- Server-rendered HTML and UI pages compile into ordinary Flint route handlers.
+- UI pages compile into ordinary Flint route handlers.
 
 ## Learning Path
 
 1. Install and create a project: [Installation](/guide/installation).
 2. Build a few endpoints: [First API](/guide/first-api).
-3. Render HTML: [Visual Pages](/guide/pages) and [UI Pages](/guide/ui-pages).
+3. Render a page: [UI Pages](/guide/ui-pages).
 4. Learn the VM model: [Core Concepts](/guide/core-concepts).
 5. Split a larger app: [Project Structure](/guide/project-structure).
 6. Keep the references nearby: [Language Syntax](/reference/language),

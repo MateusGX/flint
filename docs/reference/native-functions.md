@@ -236,35 +236,146 @@ If the system clock is before the Unix epoch, `time.now` returns `0`.
 ## `ui.*`
 
 `ui.*` natives build Flint's default styled HTML, one fragment at a time. Each
-takes the current HTML accumulator as `html` and returns the accumulator with
-a fragment appended — the same shape as `string.concat`. See
-[UI Pages](/guide/ui-pages) for the page-level usage pattern.
+takes the current HTML accumulator as its first argument and returns the
+updated accumulator. UI pages normally call these through `section .render`;
+direct calls are useful when reading generated output or writing custom route
+handlers.
 
-| Native | Call | Returns |
-|---|---|---|
-| `ui.window` | `ncallr dst, ui.window, html, title` | `html` with the document shell, default stylesheet, browser tab title (`<title>`), and a styled page frame for `title` appended. |
-| `ui.window_end` | `ncallr dst, ui.window_end, html` | `html` with a frame opened by `ui.window` closed. |
-| `ui.card` | `ncallr dst, ui.card, html, title` | `html` with a bordered content panel for `title` appended. |
-| `ui.card_end` | `ncallr dst, ui.card_end, html` | `html` with a panel opened by `ui.card` closed. |
-| `ui.section` | `ncallr dst, ui.section, html, title` | `html` with an unframed content group for `title` appended. |
-| `ui.section_end` | `ncallr dst, ui.section_end, html` | `html` with a group opened by `ui.section` closed. |
-| `ui.row` | `ncallr dst, ui.row, html` | `html` with a horizontal responsive layout opened. |
-| `ui.row_end` | `ncallr dst, ui.row_end, html` | `html` with a layout opened by `ui.row` closed. |
-| `ui.column` | `ncallr dst, ui.column, html` | `html` with a vertical layout opened. |
-| `ui.column_end` | `ncallr dst, ui.column_end, html` | `html` with a layout opened by `ui.column` closed. |
-| `ui.title` | `ncallr dst, ui.title, html, value` | `html` with a heading for `value` appended. |
-| `ui.text` | `ncallr dst, ui.text, html, value` | `html` with a paragraph for `value` appended. |
-| `ui.field` | `ncallr dst, ui.field, html, label, value` | `html` with a label/value display row appended. |
-| `ui.button` | `ncallr dst, ui.button, html, label, href` | `html` with a link styled as a button appended. |
-| `ui.form` | `ncallr dst, ui.form, html, method, action` | `html` with an HTML form opened. |
-| `ui.form_end` | `ncallr dst, ui.form_end, html` | `html` with a form opened by `ui.form` closed. |
-| `ui.input` | `ncallr dst, ui.input, html, label, name` | `html` with a labeled text input appended. |
-| `ui.submit` | `ncallr dst, ui.submit, html, label` | `html` with a submit button appended. |
+### Shell and Layout
 
-`title`, `value`, `label`, `href`, `method`, `action`, and `name` must be
-`str`. `ui.title`, `ui.text`, `ui.field`, and the label arguments of
-`ui.button`/`ui.input`/`ui.submit` are HTML-escaped; `ui.button`'s `href`,
-`ui.form`'s `method`/`action`, and `ui.input`'s `name` are attribute-escaped.
+| Native | Call |
+|---|---|
+| `ui.window` | `ncallr dst, ui.window, html, title` |
+| `ui.window_end` | `ncallr dst, ui.window_end, html` |
+| `ui.layout` | `ncallr dst, ui.layout, html` |
+| `ui.layout_end` | `ncallr dst, ui.layout_end, html` |
+| `ui.sidebar` | `ncallr dst, ui.sidebar, html` |
+| `ui.sidebar_end` | `ncallr dst, ui.sidebar_end, html` |
+| `ui.main` | `ncallr dst, ui.main, html` |
+| `ui.main_end` | `ncallr dst, ui.main_end, html` |
+| `ui.card` | `ncallr dst, ui.card, html, title` |
+| `ui.card_end` | `ncallr dst, ui.card_end, html` |
+| `ui.section` | `ncallr dst, ui.section, html, title[, subtitle]` |
+| `ui.section_end` | `ncallr dst, ui.section_end, html` |
+| `ui.row` | `ncallr dst, ui.row, html` |
+| `ui.row_end` | `ncallr dst, ui.row_end, html` |
+| `ui.column` | `ncallr dst, ui.column, html` |
+| `ui.column_end` | `ncallr dst, ui.column_end, html` |
+| `ui.toolbar` | `ncallr dst, ui.toolbar, html` |
+| `ui.toolbar_end` | `ncallr dst, ui.toolbar_end, html` |
+| `ui.action_bar` | `ncallr dst, ui.action_bar, html` |
+| `ui.action_bar_end` | `ncallr dst, ui.action_bar_end, html` |
+| `ui.footer` | `ncallr dst, ui.footer, html[, text]` |
+| `ui.footer_end` | `ncallr dst, ui.footer_end, html` |
+| `ui.divider` | `ncallr dst, ui.divider, html` |
+
+### Navigation
+
+| Native | Call |
+|---|---|
+| `ui.navbar` | `ncallr dst, ui.navbar, html` |
+| `ui.nav_item` | `ncallr dst, ui.nav_item, html, label, href` |
+| `ui.navbar_end` | `ncallr dst, ui.navbar_end, html` |
+| `ui.menu` | `ncallr dst, ui.menu, html, title` |
+| `ui.menu_item` | `ncallr dst, ui.menu_item, html, label, href` |
+| `ui.menu_active` | `ncallr dst, ui.menu_active, html, label, href` |
+| `ui.menu_end` | `ncallr dst, ui.menu_end, html` |
+| `ui.breadcrumb` | `ncallr dst, ui.breadcrumb, html` |
+| `ui.breadcrumb_item` | `ncallr dst, ui.breadcrumb_item, html, label, href` |
+| `ui.breadcrumb_end` | `ncallr dst, ui.breadcrumb_end, html` |
+| `ui.pagination` | `ncallr dst, ui.pagination, html` |
+| `ui.page_item` | `ncallr dst, ui.page_item, html, label, href` |
+| `ui.page_current` | `ncallr dst, ui.page_current, html, label` |
+| `ui.pagination_end` | `ncallr dst, ui.pagination_end, html` |
+
+### Content
+
+| Native | Call |
+|---|---|
+| `ui.title` | `ncallr dst, ui.title, html, value` |
+| `ui.text` | `ncallr dst, ui.text, html, value` |
+| `ui.field` | `ncallr dst, ui.field, html, label, value` |
+| `ui.badge` | `ncallr dst, ui.badge, html, label` |
+| `ui.alert` | `ncallr dst, ui.alert, html, kind, message` |
+| `ui.status` | `ncallr dst, ui.status, html, label, kind` |
+| `ui.progress` | `ncallr dst, ui.progress, html, value, max` |
+| `ui.meter` | `ncallr dst, ui.meter, html, value, max` |
+| `ui.stat` | `ncallr dst, ui.stat, html, label, value` |
+| `ui.code` | `ncallr dst, ui.code, html, value` |
+| `ui.kbd` | `ncallr dst, ui.kbd, html, value` |
+| `ui.link` | `ncallr dst, ui.link, html, label, href` |
+| `ui.image` | `ncallr dst, ui.image, html, src, alt` |
+| `ui.empty` | `ncallr dst, ui.empty, html, message` |
+
+### Lists, Tables, and Groups
+
+| Native | Call |
+|---|---|
+| `ui.list` | `ncallr dst, ui.list, html` |
+| `ui.list_item` | `ncallr dst, ui.list_item, html, text` |
+| `ui.list_end` | `ncallr dst, ui.list_end, html` |
+| `ui.ol` | `ncallr dst, ui.ol, html` |
+| `ui.ol_item` | `ncallr dst, ui.ol_item, html, text` |
+| `ui.ol_end` | `ncallr dst, ui.ol_end, html` |
+| `ui.table` | `ncallr dst, ui.table, html` |
+| `ui.caption` | `ncallr dst, ui.caption, html, text` |
+| `ui.tr` | `ncallr dst, ui.tr, html` |
+| `ui.tr_end` | `ncallr dst, ui.tr_end, html` |
+| `ui.th` | `ncallr dst, ui.th, html, label` |
+| `ui.td` | `ncallr dst, ui.td, html, value` |
+| `ui.tfoot` | `ncallr dst, ui.tfoot, html` |
+| `ui.tfoot_end` | `ncallr dst, ui.tfoot_end, html` |
+| `ui.table_end` | `ncallr dst, ui.table_end, html` |
+| `ui.tabs` | `ncallr dst, ui.tabs, html` |
+| `ui.tab` | `ncallr dst, ui.tab, html, label, id` |
+| `ui.tabs_body` | `ncallr dst, ui.tabs_body, html` |
+| `ui.tab_panel` | `ncallr dst, ui.tab_panel, html, id` |
+| `ui.tab_panel_end` | `ncallr dst, ui.tab_panel_end, html` |
+| `ui.tabs_end` | `ncallr dst, ui.tabs_end, html` |
+| `ui.accordion` | `ncallr dst, ui.accordion, html` |
+| `ui.accordion_item` | `ncallr dst, ui.accordion_item, html, title` |
+| `ui.accordion_item_end` | `ncallr dst, ui.accordion_item_end, html` |
+| `ui.accordion_end` | `ncallr dst, ui.accordion_end, html` |
+| `ui.tree` | `ncallr dst, ui.tree, html` |
+| `ui.tree_item` | `ncallr dst, ui.tree_item, html, label, href` |
+| `ui.tree_group` | `ncallr dst, ui.tree_group, html, label` |
+| `ui.tree_group_end` | `ncallr dst, ui.tree_group_end, html` |
+| `ui.tree_end` | `ncallr dst, ui.tree_end, html` |
+| `ui.steps` | `ncallr dst, ui.steps, html` |
+| `ui.step` | `ncallr dst, ui.step, html, label, active` |
+| `ui.steps_end` | `ncallr dst, ui.steps_end, html` |
+
+### Forms, Actions, and Dialogs
+
+| Native | Call |
+|---|---|
+| `ui.button` | `ncallr dst, ui.button, html, label, href` |
+| `ui.form` | `ncallr dst, ui.form, html, method, action` |
+| `ui.form_end` | `ncallr dst, ui.form_end, html` |
+| `ui.fieldset` | `ncallr dst, ui.fieldset, html, legend` |
+| `ui.fieldset_end` | `ncallr dst, ui.fieldset_end, html` |
+| `ui.input` | `ncallr dst, ui.input, html, label, name` |
+| `ui.password` | `ncallr dst, ui.password, html, label, name` |
+| `ui.number` | `ncallr dst, ui.number, html, label, name` |
+| `ui.file` | `ncallr dst, ui.file, html, label, name` |
+| `ui.textarea` | `ncallr dst, ui.textarea, html, label, name` |
+| `ui.select` | `ncallr dst, ui.select, html, label, name` |
+| `ui.option` | `ncallr dst, ui.option, html, label, value` |
+| `ui.select_end` | `ncallr dst, ui.select_end, html` |
+| `ui.checkbox` | `ncallr dst, ui.checkbox, html, label, name, value` |
+| `ui.radio` | `ncallr dst, ui.radio, html, label, name, value` |
+| `ui.hidden` | `ncallr dst, ui.hidden, html, name, value` |
+| `ui.submit` | `ncallr dst, ui.submit, html, label` |
+| `ui.dialog` | `ncallr dst, ui.dialog, html, id, title` |
+| `ui.dialog_end` | `ncallr dst, ui.dialog_end, html` |
+| `ui.dialog_trigger` | `ncallr dst, ui.dialog_trigger, html, label, id` |
+| `ui.dialog_alert` | `ncallr dst, ui.dialog_alert, html, id, title, message` |
+| `ui.dialog_confirm` | `ncallr dst, ui.dialog_confirm, html, id, title, message, action` |
+| `ui.dialog_prompt` | `ncallr dst, ui.dialog_prompt, html, id, title, label, name, action` |
+
+Text-like values are escaped for HTML where appropriate; hrefs, form
+attributes, names, ids, and similar arguments are attribute-escaped by the
+individual native.
 
 ## `http.*`
 

@@ -16,14 +16,14 @@ cd my-api
 flint serve
 ```
 
-Open the `routes/` directory in another terminal or editor.
+Open the `api/` directory in another terminal or editor.
 
 ## How Route Files Work
 
-The server loads every `.fl` file directly inside `routes/`:
+The server loads every `.fl` file directly inside `api/`:
 
 ```txt
-routes/
+api/
 ├── hello.fl
 ├── users.fl
 └── echo.fl
@@ -33,20 +33,23 @@ Each file may define functions and route declarations. A route declaration maps
 an HTTP method and path to a function:
 
 ```txt
-route GET "/hello" -> say_hello
+section .route
+    GET "/hello" -> say_hello
 ```
 
 ## Route 1: Plain Text
 
-Create or replace `routes/hello.fl`:
+Create or replace `api/hello.fl`:
 
 ```txt
+section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "Hello from Flint!"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 ```
 
 Test it:
@@ -71,9 +74,13 @@ The request flow:
 
 ## Route 2: Path Params and JSON
 
-Create `routes/users.fl`:
+Create `api/users.fl`:
 
 ```txt
+section .route
+    GET "/users/:id" -> show_user
+
+section .text
 show_user:
     mov r0, "id"
     ncallr r1, http.param, r0
@@ -88,8 +95,6 @@ show_user:
 
     ncall http.json, r2
     ret
-
-route GET "/users/:id" -> show_user
 ```
 
 Test it:
@@ -136,9 +141,13 @@ ncallr r0, json.set, r0, r1, r2
 
 ## Route 3: Read a POST Body
 
-Create `routes/echo.fl`:
+Create `api/echo.fl`:
 
 ```txt
+section .route
+    POST "/echo" -> echo_body
+
+section .text
 echo_body:
     ncallr r0, http.json_body
 
@@ -150,8 +159,6 @@ echo_body:
     ncall http.set_status, r2
     ncall http.json, r1
     ret
-
-route POST "/echo" -> echo_body
 ```
 
 Test it:
@@ -194,4 +201,4 @@ curl -i -X POST http://127.0.0.1:3000/echo \
 curl -i http://127.0.0.1:3000/missing
 ```
 
-Next: [Visual Pages](/guide/pages).
+Next: [UI Pages](/guide/ui-pages).

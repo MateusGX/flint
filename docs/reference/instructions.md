@@ -1,6 +1,8 @@
 # Instruction Set
 
 This page lists every source instruction accepted by the compiler.
+Examples on this page are instruction fragments; in `.fl` application files,
+place executable instructions under `section .text`.
 
 Operands are written as:
 
@@ -22,6 +24,7 @@ mov dst, src
 mov dst, int
 mov dst, float
 mov dst, "str"
+mov dst, data_label
 ```
 
 Copies a value into a register.
@@ -33,8 +36,9 @@ mov r2, "hello"
 mov r3, r2
 ```
 
-The source may be a register, integer literal, float literal, or string
-literal.
+The source may be a register, integer literal, float literal, string literal,
+or a `.data`/`.bss` label. Memory labels load their address as an integer; use
+`load` to read the stored value.
 
 ## Integer Arithmetic
 

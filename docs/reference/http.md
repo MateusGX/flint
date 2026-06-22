@@ -1,8 +1,8 @@
 # HTTP Runtime
 
 The HTTP runtime turns compiled Flint modules into an `axum` router. It is used
-by `flint serve`, by standalone binaries produced by `flint build`, and by
-tests through `flint::http::router`.
+by `flint serve`, by `.flintbc` artifacts served with `flint run`, by static
+HTML export for UI pages, and by tests through `flint::http::router`.
 
 `flint::http::router` and `flint::http::try_router` return a `RouterError`
 instead of panicking when routes are invalid or conflicting.
@@ -13,8 +13,8 @@ instead of panicking when routes are invalid or conflicting.
 
 | Config field | Loaded from | Recursive |
 |---|---|---|
-| `server.routes` | `.fl` files directly inside the route directory | No |
-| `server.pages` | `.flint.html` and `.flint.ui` files inside the pages directory | Yes |
+| `server.routes` | `.fl` files directly inside the route directory, when present | No |
+| `server.pages` | `.flint.ui` files inside the UI pages directory | Yes |
 
 Each route file is compiled independently into an app module. Page files are
 first converted to generated Flint source, then compiled the same way.
@@ -24,7 +24,8 @@ first converted to generated Flint source, then compiled the same way.
 Routes are declared in source with:
 
 ```txt
-route METHOD "/path" -> handler
+section .route
+    METHOD "/path" -> handler
 ```
 
 Supported methods:
@@ -36,7 +37,8 @@ GET POST PUT PATCH DELETE HEAD OPTIONS
 Dynamic path segments use `:name`:
 
 ```txt
-route GET "/users/:id" -> show_user
+section .route
+    GET "/users/:id" -> show_user
 ```
 
 Read path parameters with `http.param`.

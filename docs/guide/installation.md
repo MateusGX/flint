@@ -115,9 +115,9 @@ The minimal template creates:
 ```txt
 my-app/
 ├── flint.toml
-├── pages/
+├── app/
 │   └── index.flint.ui
-└── routes/
+└── api/
     └── hello.fl
 ```
 
@@ -160,16 +160,17 @@ curl -X POST http://127.0.0.1:3000/tasks \
 |---|---|
 | `flint new <name>` | Create a project with the minimal template. |
 | `flint new <name> --template tasks` | Create a complete Tasks API example. |
+| `flint new <name> --template static` | Create a UI-only static site project. |
 | `flint serve [dir]` | Start the development HTTP server. |
 | `flint run [dir]` | Alias for `flint serve`. |
-| `flint build [dir]` | Build a standalone release binary in `dist/`. |
+| `flint build [dir]` | Compile portable bytecode into `dist/`. |
+| `flint build --static [dir]` | Export UI pages to static HTML in `dist/`. |
 | `flint version` | Print the CLI version. |
 
 ## Editor Support
 
 Install the [Flint Language](https://marketplace.visualstudio.com/items?itemName=mateusam.flint-vscode)
 extension for VS Code to get syntax highlighting, snippets, and language
-configuration for `.fl` route/service/repository files, `.flint.html` pages,
-and `.flint.ui` pages.
+configuration for `.fl` route/service/repository files and `.flint.ui` pages.
 
 Next: [First API](/guide/first-api).

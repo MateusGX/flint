@@ -5,15 +5,13 @@
 <h1 align="center">Flint</h1>
 
 `Flint` is an experimental project that explores what an assembly-like
-language could look like when used to build HTTP APIs and server-rendered web
-systems.
+language could look like when used to build HTTP APIs and server-rendered UI
+pages.
 
 The language runs on a tiny register-based virtual machine. Route handlers are
 written in `.fl` files, compiled to bytecode, and served through the Rust HTTP
-runtime. The project also includes two page layers for web systems:
-
-- `.flint.html` for HTML-first server-rendered templates.
-- `.flint.ui` for control-first pages with a built-in default web style.
+runtime. Server-rendered UI pages live in `.flint.ui` files and compile into
+ordinary Flint route modules.
 
 ## Links
 
@@ -23,32 +21,29 @@ runtime. The project also includes two page layers for web systems:
 ## Example
 
 ```txt
+section .route
+    GET "/hello" -> say_hello
+
+section .text
 say_hello:
     mov r0, "Hello from Flint!"
     ncall http.text, r0
     ret
-
-route GET "/hello" -> say_hello
 ```
 
-A styled UI page can be written without handwritten HTML, using `ui.*`
-natives:
+A styled UI page can be written without handwritten HTML:
 
 ```txt
-@page "/"
-<%
-mov r15, "Dashboard"
-ncallr r14, ui.window, r14, r15
-mov r15, "A server-rendered page from Flint UI natives."
-ncallr r14, ui.text, r14, r15
-mov r15, "Actions"
-ncallr r14, ui.card, r14, r15
-mov r15, "Open API"
-mov r1, "/hello"
-ncallr r14, ui.button, r14, r15, r1
-ncallr r14, ui.card_end, r14
-ncallr r14, ui.window_end, r14
-%>
+section .route
+    GET "/"
+
+section .render
+    window "Dashboard"
+        text "A server-rendered page from Flint UI."
+        card "Actions"
+            btn "Open API", "/hello"
+        end
+    end
 ```
 
 ## Workspace

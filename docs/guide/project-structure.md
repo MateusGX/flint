@@ -1,18 +1,20 @@
 # Project Structure
 
 Small apps can keep everything in one route file. Larger apps are easier to
-read when you separate HTML pages, HTTP controllers, services, and data access.
+read when you separate UI pages, HTTP controllers, services, and data access.
 
 ## Default Layout
 
 ```txt
 my-app/
 ├── flint.toml
-├── pages/
+├── app/
 │   └── index.flint.ui
-├── routes/
+├── api/
 │   ├── hello.fl
 │   └── tasks.fl
+├── components/
+│   └── navbar.fl
 ├── services/
 │   └── tasks.fl
 └── repositories/
@@ -23,8 +25,9 @@ my-app/
 
 | Directory | Loaded automatically | Purpose |
 |---|---|---|
-| `pages/` | Yes, recursively for `*.flint.html` and `*.flint.ui` | Server-rendered pages. |
-| `routes/` | Yes, direct `*.fl` children only | HTTP route handlers and controllers. |
+| `app/` | Yes, recursively for `*.flint.ui` | Server-rendered UI pages. |
+| `api/` | Yes, direct `*.fl` children only when present | HTTP route handlers and controllers. |
+| `components/` | No | Reusable UI fragments included with `@use` in `.flint.ui` pages. |
 | `services/` | No | Business rules included with `use`. |
 | `repositories/` | No | Data access included with `use`. |
 
@@ -34,11 +37,15 @@ The common API flow is:
 route/controller -> service -> repository
 ```
 
-Pages can use the same services:
+Pages can use the same services, and pull in shared UI fragments from components:
 
 ```txt
+page -> component (UI fragment)
 page -> service -> repository
 ```
+
+UI-only projects can omit `api/` entirely and use `flint build --static` to
+export upload-ready HTML from `app/**/*.flint.ui`.
 
 ## Manifest
 
@@ -52,23 +59,25 @@ version = "0.1.0"
 [server]
 host         = "127.0.0.1"
 port         = 3000
-routes       = "routes"
-pages        = "pages"
+routes       = "api"
+pages        = "app"
 services     = "services"
 repositories = "repositories"
+components   = "components"
 ```
 
-Only `routes` and `pages` control automatic loading. `services` and
-`repositories` are documented conventions available to tooling and humans.
+Only `routes` and `pages` control automatic loading. `services`,
+`repositories`, and `components` are documented conventions available to
+tooling and humans; include files from them with `use` or `@use`.
 
 ## Route Modules
 
-Every `.fl` file directly inside `routes/` is compiled as an independent
+Every `.fl` file directly inside `api/` is compiled as an independent
 module:
 
 ```txt
-routes/tasks.fl
-routes/hello.fl
+api/tasks.fl
+api/hello.fl
 ```
 
 Each module gets its own bytecode program, label namespace, function table, and
@@ -84,17 +93,19 @@ Use `use` to inline shared code before compilation:
 use "services/tasks.fl"
 ```
 
-`routes/tasks.fl`:
+`api/tasks.fl`:
 
 ```txt
 use "services/tasks.fl"
 
+section .route
+    GET "/tasks" -> tasks_controller_list
+
+section .text
 tasks_controller_list:
     call tasks_service_list
     ncall http.json, r0
     ret
-
-route GET "/tasks" -> tasks_controller_list
 ```
 
 `services/tasks.fl`:
@@ -102,6 +113,7 @@ route GET "/tasks" -> tasks_controller_list
 ```txt
 use "repositories/tasks.fl"
 
+section .text
 tasks_service_list:
     call tasks_repository_all
     ret
@@ -110,40 +122,48 @@ tasks_service_list:
 `repositories/tasks.fl`:
 
 ```txt
+section .text
 tasks_repository_all:
     mov r0, "[{\"id\":\"1\",\"title\":\"Buy milk\"}]"
     ncallr r0, json.parse, r0
     ret
 ```
 
-Includes are resolved from the project root, not from the current file.
+Includes are resolved from the project root, not from the current file. Included
+`.fl` files must use sections too; put shared functions under `section .text`.
 
-## Visual Pages
+## UI Pages
 
-Pages are loaded recursively from `pages/`:
+Pages are loaded recursively from `app/`:
 
 ```txt
-pages/index.flint.html       -> /
-pages/tasks/index.flint.html -> /tasks
-pages/tasks/[id].flint.html  -> /tasks/:id
-pages/admin/index.flint.ui   -> /admin
+app/index.flint.ui       -> /
+app/tasks/index.flint.ui -> /tasks
+app/tasks/[id].flint.ui  -> /tasks/:id
+app/admin/index.flint.ui -> /admin
 ```
 
 Pages can include services:
 
-```html
-@page "/tasks"
+```txt
 @use "services/tasks.fl"
-<%
+
+section .route
+    GET "/tasks"
+
+section .text
 call tasks_service_list
 ncallr r1, json.stringify, r0
-%>
-<pre><%= r1 %></pre>
+
+section .render
+    window "Tasks"
+        code r1
+    end
 ```
 
-Use `.flint.html` pages when the output is handwritten HTML. Use `.flint.ui`
-pages when you want styled controls and default layout. Use route files when
-the output is mostly JSON, text, redirects, or request/response control flow.
+Use `.flint.ui` pages when you want styled controls and default layout. Use
+route files when the output is mostly JSON, text, redirects, or
+request/response control flow.
 
 ## Naming Rules
 
@@ -172,12 +192,22 @@ They are likely to collide after `use` expansion.
 
 ## Build Output
 
-`flint build` creates a generated Rust project under `.flint-build/`, embeds
-all route source and generated page source, builds a release binary, and copies
-it to:
+`flint build` compiles all route source and generated page source into portable
+bytecode at:
 
 ```txt
-dist/<project-name>
+dist/<project-name>.flintbc
+```
+
+Run it with `flint run dist/<project-name>.flintbc`.
+
+For static sites, `flint build --static` writes directory-index HTML files:
+
+```txt
+dist/index.html
+dist/about/index.html
+dist/flint.css
+dist/flint.js
 ```
 
 See [CLI and Manifest](/reference/cli) for full command details.
